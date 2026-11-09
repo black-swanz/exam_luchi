@@ -378,6 +378,19 @@ table.info-t td.ell{max-width:240px;white-space:nowrap;overflow:hidden;text-over
 .a4 h2{font-size:19px;margin:26px 0 12px}
 .a4-sec{margin-bottom:16px}
 .a4-item{margin-bottom:12px}
+
+/* ===== правки 09.11.2026 ===== */
+.ban-done a.red{color:#d9534f;text-decoration:underline;cursor:pointer}
+.quick{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.quick .btn{padding:4px 12px;font-size:14px}
+.pick-hist{margin-top:18px;border:1px solid var(--line);border-radius:8px;background:#fff;padding:14px 18px;max-width:760px}
+.pick-hist .ph-title{font-weight:600;font-size:17px;margin-bottom:8px}
+.pick-hist .ph-row{display:flex;align-items:center;gap:16px;padding:8px 0;border-top:1px solid var(--line2)}
+.pick-hist .ph-row:first-of-type{border-top:0}
+.pick-hist .ph-row>div{flex:1;min-width:0}
+.pick-hist .ph-row b{display:block;font-weight:600}
+.pick-hist .ph-row span{font-size:14px}
+.pick-hist .ph-row div span{color:var(--muted)}
 </style>
 </head>
 <body>
@@ -416,7 +429,7 @@ const SERVICES = DOCTORS.concat(EXTRA_SERVICES);
 const VK_SPECS = ['Аллерголог-иммунолог','Гинеколог','Врач лечебной физкультуры','Гастроэнтеролог','Гематолог','Дерматовенеролог','Кардиолог','Невролог','Нефролог','Онколог','Оториноларинголог','Офтальмолог','Педиатр','Пульмонолог','Ревматолог','Терапевт','Травматолог-ортопед','Уролог','Эндокринолог'];
 const NOT_IN_PROGRAM = ['Анестезиолог-реаниматолог','Ветеринар','Врач мануальной терапии','Косметолог','Пластический хирург','Психиатр','Сурдолог'];
 
-const TICKET_TYPES = { zapis: 'Создать запись', konsult: 'Создать консультацию', gp: 'Создать гарантийное письмо', zhaloba: 'Создать жалобу' };
+const TICKET_TYPES = { zapis: 'Создать запись', konsult: 'Создать консультацию', gp: 'Создать гарантийное письмо', zhaloba: 'Создать жалобу', hosp: 'Госпитализация' };
 
 
 /* ---- районы карты (схема) ---- */
@@ -511,6 +524,9 @@ const SCENARIO = /*SCENARIO_START*/{"meta": {"title": "Экзамен для В�
 
 const SC_ERRORS = [];
 const SC_META = Object.assign({ title: 'CRM 2.0', storageKey: 'luchi-crm-2.0', operator: 'f.vatrushkin@luchi.ru', operatorName: 'Ватрушкин Фрол Агафонович', defaultPeriod: '-' }, SCENARIO.meta || {});
+const V2 = !!SC_META.actionsV2;   // правило 8.8: окна «Отложить / Передать / Закрыть / Создание обращения» в новой редакции
+const GROUPS_UI = () => SC_META.groups || GROUPS;
+const groupStaff = g => (g && SC_META.groupStaff && SC_META.groupStaff[g]) || (g ? STAFF_RESP.filter(x => x !== OPERATOR) : []);
 const OPERATOR = (() => { try { const q = new URLSearchParams(location.search).get('op'); if (q && /^[\w.@-]{1,40}$/.test(q)) return q; } catch (e) {} return SC_META.operator; })();
 /* «@-7 09:40» = 7 дней назад в 09:40; «@+20» = через 20 дней (только дата); «@0 08:47» = сегодня */
 function scDate(str) {
@@ -612,25 +628,59 @@ const MONTHS_G = ['января','февраля','марта','апреля','�
 const clone = o => JSON.parse(JSON.stringify(o));
 function pastTicketFromHistory(p, h) {
   return { id: h.id, type: h.type, pid: p.id, whom: h.whom || 'self', created: h.date, status: h.status || 'Завершено', resp: h.resp, creator: h.resp, group: 'Операторы - Первая линия', arrived: true, past: true, done: true, hidden: true, waiting: false,
-    step: h.type === 'gp' ? 3 : h.type === 'zapis' ? 5 : 1, form: h.type === 'konsult' ? { finished: true, sub: h.sub || '-', desc: h.desc || '-', source: h.source || 'Другое', result: h.result || '-' } : {}, preview: h.desc || '', desc: h.desc, topic: h.topic, owner: h.owner,
+    step: h.type === 'gp' ? 3 : h.type === 'zapis' ? 5 : 1, form: h.type === 'konsult' ? { finished: true, sub: h.sub || '-', desc: h.desc || '-', source: h.source || 'Другое', result: h.result || '-' } : {}, preview: h.desc || '', desc: h.desc, topic: h.topic, owner: h.owner, histStatus: h.histStatus,
     records: [], gps: h.gps || [], comments: h.comment ? [{ date: h.date, who: h.resp, text: h.comment }] : [], changes: [{ date: h.date, who: h.resp, what: 'Обращение создано' }, { date: h.date, who: h.resp, what: 'Обращение завершено' }], unread: 0 };
+}
+/* ---- правило 8.4: даты кейса привязаны к «сейчас». Точка отсчёта — последнее сообщение клиента (ticket.anchor);
+   в момент выдачи кейса она получает время «сейчас − 3 мин», все даты кейса сдвигаются на ту же величину (кроме дат рождения). ---- */
+const DT_RE = /(\d\d)\.(\d\d)\.(\d{4})(?: (\d\d):(\d\d))?/g, ISO_RE = /\b(\d{4})-(\d\d)-(\d\d)(?: (\d\d):(\d\d))?/g;
+const p2_ = n => String(n).padStart(2, '0');
+const fD_ = x => `${p2_(x.getDate())}.${p2_(x.getMonth() + 1)}.${x.getFullYear()}`, fT_ = x => `${p2_(x.getHours())}:${p2_(x.getMinutes())}`;
+function parseDT(s) { const m = String(s || '').match(/(\d\d)\.(\d\d)\.(\d{4})(?: (\d\d):(\d\d))?/); return m ? new Date(+m[3], +m[2] - 1, +m[1], m[4] != null ? +m[4] : 12, m[5] != null ? +m[5] : 0).getTime() : null; }
+function shiftStr(str, ms) {
+  return String(str).replace(DT_RE, (m0, d, mo, y, h, mi) => { const x = new Date(new Date(+y, +mo - 1, +d, h != null ? +h : 12, mi != null ? +mi : 0).getTime() + ms); return h != null ? fD_(x) + ' ' + fT_(x) : fD_(x); })
+    .replace(ISO_RE, (m0, y, mo, d, h, mi) => { const x = new Date(new Date(+y, +mo - 1, +d, h != null ? +h : 12, mi != null ? +mi : 0).getTime() + ms); return `${x.getFullYear()}-${p2_(x.getMonth() + 1)}-${p2_(x.getDate())}` + (h != null ? ' ' + fT_(x) : ''); });
+}
+function shiftDeep(o, ms) {
+  if (Array.isArray(o)) { o.forEach((v, i) => { if (typeof v === 'string') o[i] = shiftStr(v, ms); else if (v && typeof v === 'object') shiftDeep(v, ms); }); return o; }
+  if (o && typeof o === 'object') Object.keys(o).forEach(k => { if (k === 'birth') return; const v = o[k]; if (typeof v === 'string') o[k] = shiftStr(v, ms); else if (v && typeof v === 'object') shiftDeep(v, ms); });
+  return o;
+}
+function casePids(c) { const t = SCENARIO_TICKETS.find(x => x.case === c); if (!t) return []; const p = SC.patients.find(x => x.id === t.pid) || {}; return [t.pid].concat(p.relatives || []); }
+function shiftCase(st, c, ms) {
+  const pids = casePids(c);
+  pids.forEach(pid => { if (st.pt[pid]) shiftDeep(st.pt[pid], ms); });
+  Object.values(st.tickets).forEach(t => {
+    if (!pids.includes(t.pid)) return;
+    ['created', 'presetCreated'].forEach(k => { if (t[k]) t[k] = shiftStr(t[k], ms); });
+    shiftDeep(t.changes, ms); shiftDeep(t.comments, ms); if (t.past) shiftDeep(t.form, ms);
+  });
+  (st.mail || []).forEach(m => { if (m.case === c) m.date = shiftStr(m.date, ms); });
+}
+function anchorCase(st, c, target) {
+  if (!st.anch || st.anch[c] == null) return;
+  const d = target - st.anch[c]; if (Math.abs(d) > 20000) shiftCase(st, c, d); st.anch[c] = target;
 }
 function freshState() {
   const pt = {}, tickets = {}, order = [];
   SEED_PATIENTS.forEach(p => {
-    pt[p.id] = clone({ chat: p.chat || [], visits: p.visits || [], gps: p.gps || [], approvals: p.approvals || [], telemed: p.telemed || [] });
+    pt[p.id] = clone({ chat: p.chat || [], visits: p.visits || [], gps: p.gps || [], approvals: p.approvals || [], telemed: p.telemed || [], program: p.program });
     (p.history || []).forEach(h => { tickets[h.id] = pastTicketFromHistory(p, h); });
   });
   SCENARIO_TICKETS.forEach(x => {
-    tickets[x.id] = { id: x.id, case: x.case, type: x.type, pid: x.pid, whom: 'self', drop: x.drop, msg: x.msg, created: '', presetCreated: x.created || '', desc: x.desc, topic: x.topic, owner: x.owner, preview: '', status: 'В работе', resp: OPERATOR, creator: 'system', group: 'Операторы - Первая линия', arrived: false, hidden: false, waiting: false, step: 1, form: {}, records: [], gps: [], comments: [], changes: [], done: false, unread: 0 };
+    tickets[x.id] = { id: x.id, case: x.case, type: x.type, pid: x.pid, whom: 'self', drop: x.drop, msg: x.msg, msgs: x.msgs || null, created: '', presetCreated: x.created || '', desc: x.desc, topic: x.topic, owner: x.owner, histStatus: x.histStatus, preview: '', status: 'В работе', resp: OPERATOR, creator: 'system', group: 'Операторы - Первая линия', arrived: false, hidden: false, waiting: false, step: 1, form: {}, records: [], gps: [], comments: [], changes: [], done: false, unread: 0 };
     order.push(x.id);
   });
-  return {
+  const st = {
     v: 4, sig: SC_SIG, opStatus: 'off', oldDesign: false, chatOpen: true, drawer: false,
-    pt, tickets, order, chat: [], startAt: null, claims: [], konsults: [], downloads: [],
+    pt, tickets, order, chat: [], startAt: null, claims: [], konsults: [], downloads: [], mail: clone(MAILBOX), anch: {},
     counters: { appeal: Math.max(9160200, ...SCENARIO_TICKETS.map(t => t.id + 1)), visit: 2610302518, gp: 281050, claim: 2610300022 },
     log: [], startedAt: new Date().toISOString(), ui: {}
   };
+  // сразу «приклеиваем» кейсы к текущему моменту; при выдаче кейса даты ещё раз подтянутся к моменту выдачи
+  const target = Date.now() - 3 * 60000;
+  SCENARIO_TICKETS.forEach(x => { const a = parseDT(x.anchor); if (a == null) return; st.anch[x.case] = a; anchorCase(st, x.case, target); });
+  return st;
 }
 let S;
 function load() { try { const r = localStorage.getItem(LS_KEY); if (r) { const p = JSON.parse(r); if (p && p.v === 4 && p.sig === SC_SIG) return p; } } catch (e) {} return freshState(); }
@@ -985,7 +1035,7 @@ function fakeRows(n, seed, fn) { const r = seeded(seed); return Array.from({ len
 const pick = (arr, r) => arr[Math.floor(r() * arr.length)];
 const cName = id => { const c = CLINICS.find(x => x.id === id); return c ? c.name : (id || '-'); };
 const dtCell = s => s && s.includes(' ') ? `${s.split(' ')[0]}<span class="sm">${s.split(' ')[1]}</span>` : (s || '-');
-function chatTime(s) { const m = String(s || '').match(/(\d\d)\.(\d\d)\.(\d{4}) (\d\d:\d\d)/); if (!m) return s || ''; return `${+m[1]} ${['янв.','февр.','мар.','апр.','мая','июн.','июл.','авг.','сент.','окт.','нояб.','дек.'][+m[2] - 1]} ${m[4]}`; }
+function chatTime(s) { const m = String(s || '').match(/(\d\d)\.(\d\d)\.(\d{4}) (\d\d:\d\d)/); if (!m) return s || ''; const td = new Date(); if (+m[1] === td.getDate() && +m[2] === td.getMonth() + 1 && +m[3] === td.getFullYear()) return m[4]; return `${+m[1]} ${['янв.','февр.','мар.','апр.','мая','июн.','июл.','авг.','сент.','окт.','нояб.','дек.'][+m[2] - 1]} ${m[4]}`; }
 
 
 /* ---- совместимость с платформой экзамена (exam-platform): единая лента S.chat для пульта коуча ---- */
@@ -1004,15 +1054,60 @@ function beep() {
     [[880, 0], [1320, 0.16]].forEach(([f, t0]) => { const o = AC.createOscillator(), g = AC.createGain(); o.type = 'sine'; o.frequency.value = f; o.connect(g); g.connect(AC.destination); const t = AC.currentTime + t0; g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.35, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.35); o.start(t); o.stop(t + 0.4); });
   } catch (e) {}
 }
+/* правило 8.5: перед последним сообщением (сообщениями) клиента — «Чат назначен на <логин ученика>» */
+const assignText = () => 'Чат назначен на ' + String(OPERATOR).toLowerCase() + '. Причина — API/скрипт.';
+function insertAssign(chat) {
+  let i = chat.length - 1; if (i < 0 || chat[i].from !== 'client') return;
+  const last = chat[i].d; while (i > 0 && chat[i - 1].from === 'client' && chat[i - 1].d === last) i--;
+  const prev = chat[i - 1]; if (prev && prev.from === 'system' && /^Чат назначен на/.test(prev.text)) return;
+  let at = (parseDT(last) || Date.now()) - 60000; const pk = prev && parseDT(prev.d); if (pk && pk > at) at = pk;
+  chat.splice(i, 0, { from: 'system', text: assignText(), d: fmtDT(new Date(at)) });
+}
 function deliver(t) {
-  const now = fmtDT(nowD()); t.arrived = true; t.created = t.presetCreated || now; t.creator = 'system';
+  const now = fmtDT(nowD()); const msgAt = Date.now() - 3 * 60000;
+  anchorCase(S, t.case, msgAt);
+  t.arrived = true; t.created = t.presetCreated || now; t.creator = 'system';
   const chat = S.pt[t.pid].chat;
-  if (t.msg) { chat.push({ from: 'system', text: 'Обращение начато ' + chatTime(now), d: now }); chat.push({ from: 'client', text: t.msg, d: now }); t.preview = t.msg; t.unread = 1; }
-  else { const last = [...chat].reverse().find(m => m.from === 'client'); t.preview = last ? last.text : ''; t.unread = 0; }
+  const msgs = t.msgs || (t.msg ? [t.msg] : []);
+  if (msgs.length) {
+    const t0 = msgAt - (msgs.length - 1) * 60000;
+    chat.push({ from: 'system', text: 'Новое обращение. Тема: Не указана', d: fmtDT(new Date(t0)) });
+    msgs.forEach((m, i) => chat.push({ from: 'client', text: m, d: fmtDT(new Date(t0 + i * 60000)) }));
+    t.preview = msgs[msgs.length - 1]; t.unread = msgs.length;
+  } else { const last = [...chat].reverse().find(m => m.from === 'client'); t.preview = last ? last.text : ''; t.unread = 0; }
+  insertAssign(chat);
   t.changes.push({ date: now, who: 'system', what: 'Обращение создано, назначено на ' + OPERATOR });
-  mirror('system', 'Новое обращение «' + TICKET_TYPES[t.type] + '». ' + (t.msg ? 'Клиент: «' + t.msg + '»' : 'Последнее сообщение в чате: «' + t.preview + '»') + ' — чтобы ответить от этого клиента, начните сообщение с #' + t.case, t);
+  mirror('system', 'Новое обращение «' + TICKET_TYPES[t.type] + '». ' + (msgs.length ? 'Клиент: «' + msgs.join(' / ') + '»' : 'Последнее сообщение в чате: «' + t.preview + '»') + ' — чтобы ответить от этого клиента, начните сообщение с #' + t.case, t);
   log('ticket_arrive', { ticket: t.id, case: t.case, ticketType: TICKET_TYPES[t.type], patient: t.pid });
 }
+/* ---- команды коуча с платформы (правило 8.10) ---- */
+function dropNow(list, why) {
+  list = list.filter(t => t && !t.arrived); if (!list.length) { toast('Нечего выдавать', why || '', 'info'); return []; }
+  list.forEach(deliver); save(); beep();
+  toast(list.length > 1 ? `Новые обращения: ${list.length}` : 'Новое обращение', list.map(t => '№' + t.id).join(', '), 'info');
+  render(); if (typeof coachRefresh === 'function') coachRefresh(); return list;
+}
+const CMD = {
+  'issue-case': d => { const t = S.order.map(id => S.tickets[id]).find(x => x && x.case === +d.case && !x.past); log('coach_issue_case', { case: +d.case }); if (t && t.arrived) { toast('Кейс ' + d.case + ' уже выдан', '', 'info'); return; } dropNow([t]); },
+  'next-event': () => { const t = S.order.map(id => S.tickets[id]).find(x => x && !x.arrived && x.case); log('coach_next_event', { ticket: t && t.id }); dropNow([t], 'Все обращения сценария уже выданы'); },
+  'add-ticket': d => {
+    const pid = +d.pid; if (!S.pt[pid]) return; const type = Object.keys(TICKET_TYPES).find(k => TICKET_TYPES[k] === d.cat) || 'konsult';
+    const t = newTicket(type, d.comment || '', true, d.group || null, pid, 'self'); t.creator = 'system'; t.unread = 0;
+    if (d.msg) { const at = Date.now() - 60000; S.pt[pid].chat.push({ from: 'system', text: 'Новое обращение. Тема: Не указана', d: fmtDT(new Date(at)) }, { from: 'client', text: d.msg, d: fmtDT(new Date(at)) }); insertAssign(S.pt[pid].chat); t.preview = d.msg; t.unread = 1; mirror('client', d.msg, t); }
+    log('coach_add_ticket', { ticket: t.id, patient: pid, ticketType: TICKET_TYPES[type], msg: d.msg || '' }); save(); beep(); toast('Новое обращение', '№' + t.id, 'info'); render();
+  },
+  'reset-case': d => {
+    const c = +d.case; const pids = casePids(c); if (!pids.length) return; const fr = freshState();
+    pids.forEach(pid => { S.pt[pid] = fr.pt[pid]; });
+    Object.keys(S.tickets).forEach(id => { const t = S.tickets[id]; if (pids.includes(t.pid) || pids.includes(+t.whom)) delete S.tickets[id]; });
+    Object.keys(fr.tickets).forEach(id => { const t = fr.tickets[id]; if (pids.includes(t.pid)) S.tickets[id] = t; });
+    S.order = S.order.filter(id => S.tickets[id]); SCENARIO_TICKETS.filter(x => x.case === c).forEach(x => { if (!S.order.includes(x.id)) S.order.push(x.id); });
+    (S.mail || []).forEach((m, i) => { if (m.case === c) S.mail[i] = fr.mail[i]; });
+    S.claims = S.claims.filter(x => !pids.includes(x.pid)); S.anch[c] = fr.anch[c];
+    log('case_reset', { case: c, patients: pids }); const t = S.order.map(id => S.tickets[id]).find(x => x.case === c);
+    dropNow([t]); toast('Кейс ' + c + ' сброшен', 'Обращение выдано заново', 'info');
+  }
+};
 function tick(force) {
   if (!S.startAt) return;
   const el = (Date.now() - S.startAt) / 1000; const due = S.order.map(id => S.tickets[id]).filter(t => t && !t.arrived && (force || t.drop <= el));
@@ -1226,7 +1321,7 @@ function clinicsList() {
 ACT.clinicInfo = a => { const c = CLINICS.find(x => x.id === a.dataset.id); log('clinic_view', { clinic: c.name }); openModal(`<h3><span><span class="dot ${c.color}" style="display:inline-block;margin-right:8px"></span>${esc(c.name)}</span><button data-act="modalClose">×</button></h3>${clinicSide(c, true)}`, 'wide'); };
 function postponedList() {
   const tabs = ['Мои обращения', 'Ночные регионы', 'Утренние регионы', 'Сделать в первую очередь', 'Подбор', 'Аккаунт менеджмент', 'ВНД ночь', 'ЛПР'];
-  const mine = Object.values(S.tickets).filter(t => t.status === 'Отложено').map(t => `<tr class="click" data-act="openTicket" data-id="${t.id}"><td><span class="dot grey" style="display:inline-block;margin-right:6px"></span><a>${t.id}</a></td><td><a>${esc((t.preview || '').slice(0, 40))}</a></td><td>${t.created}</td><td>${showVal(t.postpone.date, true)}</td><td>${(t.postpone.labels || []).join(', ') || '-'}</td><td>-</td><td><button class="btn grey" style="padding:4px 10px">${I.eye}</button></td><td>${ptCell(t.pid)}</td><td>${esc(t.postpone.city)}</td><td>${esc(t.postpone.reason)}</td></tr>`);
+  const mine = Object.values(S.tickets).filter(t => /^Отложено/.test(t.status)).map(t => `<tr class="click" data-act="openTicket" data-id="${t.id}"><td><span class="dot grey" style="display:inline-block;margin-right:6px"></span><a>${t.id}</a></td><td><a>${esc((t.preview || '').slice(0, 40))}</a></td><td>${t.created}</td><td>${showVal(t.postpone.date, true)}</td><td>${(t.postpone.labels || []).join(', ') || '-'}</td><td>-</td><td><button class="btn grey" style="padding:4px 10px">${I.eye}</button></td><td>${ptCell(t.pid)}</td><td>${esc(t.postpone.city)}</td><td>${esc(t.postpone.reason)}</td></tr>`);
   const fk = fakeRows((S.ui.ppTab || 0) === 0 ? 0 : 8, 71, (i, r) => `<tr class="click" data-act="toastStub" data-t="Обращение другого оператора — недоступно"><td><span class="dot grey" style="display:inline-block;margin-right:6px"></span><a>${9152000 + Math.floor(r() * 900)}</a></td><td><a>${pick(['Жду звонка', 'Перезвоните', 'Ок'], r)}</a></td><td>-</td><td>-</td><td>${pick(LABELS, r)}</td><td>-</td><td><button class="btn grey" style="padding:4px 10px">${I.eye}</button></td><td>${fakePt(r)}</td><td>${pick(POSTPONE_CITIES, r)}</td><td>${pick(POSTPONE_REASONS, r)}</td></tr>`);
   return listPage({ found: mine.length + fk.length, tabs, tabKey: 'ppTab', filters: ['Метки', 'Группа', 'Город', 'Дедлайн'], head: ['Номер', 'Чат', 'Создано', 'Дедлайн', 'Метки', 'Теги', 'Услуги', 'Пациент', 'Город', 'Описание'], rows: mine.concat(fk) });
 }
@@ -1316,8 +1411,8 @@ function adminPage(pid) {
 
 /* ---------------- корпоративная почта ---------------- */
 function mailPage() {
-  const cur = MAILBOX.find(m => m.id === S.ui.mailOpen);
-  return `<div class="mail"><div class="mail-top">✉ Почта · ${OPERATOR}</div><div class="mail-body"><div class="mail-list">${MAILBOX.map(m => `<div class="mail-item ${cur && cur.id === m.id ? 'on' : ''}" data-act="mailOpen" data-id="${m.id}"><b>${esc(m.from)}</b><span>${esc(m.subject)}</span><small>${esc(m.date)}</small></div>`).join('')}</div>
+  const MB = S.mail || MAILBOX; const cur = MB.find(m => m.id === S.ui.mailOpen);
+  return `<div class="mail"><div class="mail-top">✉ Почта · ${OPERATOR}</div><div class="mail-body"><div class="mail-list">${MB.map(m => `<div class="mail-item ${cur && cur.id === m.id ? 'on' : ''}" data-act="mailOpen" data-id="${m.id}"><b>${esc(m.from)}</b><span>${esc(m.subject)}</span><small>${esc(m.date)}</small></div>`).join('')}</div>
   <div class="mail-view">${cur ? `<h3>${esc(cur.subject)}</h3><div class="muted">${esc(cur.from)} &lt;${esc(cur.addr)}&gt; · ${esc(cur.date)}</div><div style="white-space:pre-wrap;margin:20px 0">${esc(cur.body)}</div>${cur.files.map(f => `<div class="mail-file" data-act="mailDl" data-f="${esc(f)}">📄 ${esc(f)} <span>${(S.downloads || []).includes(f) ? '✓ Скачано' : 'Скачать'}</span></div>`).join('')}` : '<div class="empty-note">Выберите письмо</div>'}</div></div></div>`;
 }
 ACT.mailOpen = a => { S.ui.mailOpen = a.dataset.id; save(); log('mail_open', { mail: a.dataset.id }); render(); };
@@ -1381,10 +1476,10 @@ function ticketPage(id) {
   const t = S.tickets[id];
   if (!t || !t.arrived) return `<button class="btn out-blue" data-act="toList">${I.back} К списку</button><div class="ban y" style="margin-top:24px">Обращение не найдено</div>`;
   if (window.__lastTicket !== id) { window.__lastTicket = id; t.unread = 0; save(); log('ticket_open', { ticket: id, ticketType: TICKET_TYPES[t.type] }); }
-  const closed = t.done || t.status === 'Закрыто';
+  const closed = t.done || t.status === 'Закрыто' || t.status === 'Завершено';
   const P = pat(t.pid); const cp = cardPid(t);
   let form = '';
-  if (t.type === 'zapis') form = zapisView(t); else if (t.type === 'konsult') form = konsultView(t); else if (t.type === 'gp') form = gpView(t); else form = zhalobaView(t);
+  if (t.type === 'zapis') form = zapisView(t); else if (t.type === 'konsult') form = konsultView(t); else if (t.type === 'gp') form = gpView(t); else if (t.type === 'hosp') form = hospView(t); else form = zhalobaView(t);
   const tabsArr = [['hist', 'История обращений'], ['visits', 'История записей'], ['gp', 'Гарантийные письма'], ['approvals', 'Согласования'], ['changes', 'История изменений'], ['comments', 'Комментарии'], ['telemed', 'Телемед консультации']];
   const it = (S.ui.itab || {})[id];
   const cbind = 'ui.cm.' + id;
@@ -1398,10 +1493,10 @@ function ticketPage(id) {
     ? (closed ? '' : `<button class="btn" data-act="tAction" data-a="wait">${I.info} Жду ответ</button><button class="btn out-red" data-act="tAction" data-a="close">Закрыть обращение</button>`)
     : `${closed ? '' : `<button class="btn" data-act="tAction" data-a="postpone">${I.clock} Отложить</button><button class="btn" data-act="tAction" data-a="transfer">${I.undo} Передать</button><button class="btn" data-act="tAction" data-a="wait">${I.info} Жду ответ</button>`}<button class="btn" data-act="tAction" data-a="new">${I.plus()} Обращение</button>${closed ? '' : `<button class="btn out-red" data-act="tAction" data-a="close">Закрыть обращение</button>`}`;
   return `<button class="btn out-blue" data-act="toList">${I.back} К списку</button>
-  ${closed && !(t.past && t.type === 'zhaloba') ? `<div class="ban-done">${I.info} <span>${t.status === 'Закрыто' ? 'Обращение закрыто' : 'Обращение завершено'}</span> <span class="muted">|</span> <span>Категоризировано</span></div>` : ''}
+  ${closed ? `<div class="ban-done">${I.info} <span>Обращение завершено</span> <span class="muted">|</span> <a class="red" data-act="repeatAppeal" data-id="${id}">Повторное обращение</a></div>` : ''}
   ${t.waiting ? `<div class="ban y">${I.clock} Обращение ожидает ответа пациента и скрыто из списка «Мои обращения в работе»</div>` : ''}
-  ${t.status === 'Отложено' ? `<div class="ban y">${I.clock} Обращение отложено до ${showVal(t.postpone.date, true)} · ${esc(t.postpone.group)}</div>` : ''}
-  ${t.status === 'Передано' ? `<div class="ban y">${I.undo} Обращение передано: ${esc(t.transfer.group)}${t.transfer.resp ? ' · ' + t.transfer.resp : ''}</div>` : ''}
+  ${/^Отложено/.test(t.status) ? `<div class="ban y">${I.clock} Обращение отложено до ${showVal(t.postpone.date, true)} · ${esc(t.postpone.group)}</div>` : ''}
+  ${/^Передано/.test(t.status) ? `<div class="ban y">${I.undo} Обращение передано: ${esc(t.transfer.group)}${t.transfer.resp ? ' · ' + t.transfer.resp : ''}</div>` : ''}
   <div class="meta"><div><span>Дата создания</span>${t.created}</div><div><span>Создатель</span>${t.creator}</div><div><span>Ответственный</span>${t.resp}</div><div><span>Тип</span>${TICKET_TYPES[t.type]}</div><div><span>Статус</span>${t.status}</div></div>
   <div class="f-grid"><div class="f"><label>Обратившийся пациент <span class="copy" data-act="copy" data-t="${P.id}">${I.copy}</span></label>${sel({ id: 'tWho', value: String(P.id), opts: [{ v: String(P.id), l: P.id + ' ' + P.name }], clear: false, dis: true })}</div>
   <div class="f"><label>Пациент <span class="copy" data-act="copy" data-t="${esc(pat(cp).name)}">${I.copy}</span></label>${sel({ id: 'tWhom', bind: `tickets.${id}.whom`, opts: whomOpts, clear: false, dis: closed, after: v => { log('ticket_patient', { ticket: id, whom: v }); render(); } })}</div></div>
@@ -1431,11 +1526,11 @@ ACT.detail = a => {
 ACT.tAction = a => {
   const id = +route().id; const t = S.tickets[id]; const act = a.dataset.a;
   log('ticket_action', { ticket: id, action: a.textContent.trim() });
-  if (act === 'wait') { t.waiting = true; t.hidden = true; t.status = 'Ожидает ответа'; addChange(t, 'Статус: Жду ответ'); save(); toast('Обращение скрыто до ответа пациента', '№' + id); go('#/appeals'); return; }
+  if (act === 'wait') { t.waiting = true; t.hidden = true; t.status = V2 ? 'Жду ответ клиента' : 'Ожидает ответа'; addChange(t, 'Статус: Жду ответ'); save(); toast('Обращение скрыто до ответа пациента', '№' + id); go('#/appeals'); return; }
   S.ui.m = { err: {} };
-  if (act === 'postpone') S.ui.m = { date: '', city: '', reason: '', labels: [], group: '', err: {} };
-  if (act === 'transfer') S.ui.m = { group: '', resp: '', err: {} };
-  if (act === 'close') S.ui.m = { reason: '', createNew: false, newType: '', comment: '', err: {} };
+  if (act === 'postpone') S.ui.m = { date: '', city: '', reason: '', labels: [], group: '', comment: '', err: {} };
+  if (act === 'transfer') S.ui.m = { group: '', resp: '', comment: '', err: {} };
+  if (act === 'close') S.ui.m = { reason: '', createNew: 'Нет', comment: '', err: {} };
   if (act === 'new') S.ui.m = { cat: '', me: true, group: '', comment: '', err: {} };
   S.ui.modal = { name: act, ticket: id }; save(); render();
 };
@@ -1445,40 +1540,44 @@ function modalHTML() {
   const ek = { errKey: 'ui.m.err' };
   const head = t => `<h3>${t} <button data-act="mClose">×</button></h3>`;
   let h = '';
-  if (md.name === 'postpone') h = head('Отложить обращение') + mF('Дата следующего выполнения', 1, dt(Object.assign({ id: 'mDate', bind: 'ui.m.date', time: true, err: e.date, errField: 'date' }, ek))) + mF('Город', 1, sel(Object.assign({ id: 'mCity', bind: 'ui.m.city', opts: POSTPONE_CITIES, err: e.city, errField: 'city' }, ek))) + mF('Причина, по которой отложено', 1, sel(Object.assign({ id: 'mReason', bind: 'ui.m.reason', opts: POSTPONE_REASONS, err: e.reason, errField: 'reason' }, ek))) + mF('Метки', 0, sel({ id: 'mLabels', bind: 'ui.m.labels', opts: LABELS, multi: true })) + mF('Назначенная группа', 1, sel(Object.assign({ id: 'mGroup', bind: 'ui.m.group', opts: GROUPS, err: e.group, errField: 'group' }, ek))) + `<div class="foot"><button class="btn" data-act="mClose">Отмена</button><button class="btn pri" data-act="mSubmit">Сохранить</button></div>`;
-  if (md.name === 'transfer') h = head('Передать обращение') + mF('Назначенная группа', 1, sel(Object.assign({ id: 'mGroup', bind: 'ui.m.group', opts: GROUPS, err: e.group, errField: 'group' }, ek))) + mF('Ответственный', 0, sel({ id: 'mResp', bind: 'ui.m.resp', opts: STAFF_RESP.filter(x => x !== OPERATOR) })) + `<div class="foot"><button class="btn" data-act="mClose">Отмена</button><button class="btn pri" data-act="mSubmit">Передать</button></div>`;
-  if (md.name === 'close') h = head('Закрытие обращения') + mF('Причина закрытия', 1, sel(Object.assign({ id: 'mReason', bind: 'ui.m.reason', opts: CLOSE_REASONS, err: e.reason, errField: 'reason' }, ek))) + `<div class="f">${chk('ui.m.createNew', 'Создать новое', 'mRe')}</div>` + (m.createNew ? mF('Тип обращения', 1, sel(Object.assign({ id: 'mNewType', bind: 'ui.m.newType', opts: Object.values(TICKET_TYPES), err: e.newType, errField: 'newType' }, ek))) : '') + mF('Комментарий', 0, ta('ui.m.comment', { h: 90 })) + `<div class="foot"><button class="btn" data-act="mClose">Отменить</button><button class="btn red" data-act="mSubmit">Закрыть обращение</button></div>`;
+  if (md.name === 'postpone' && !V2) h = head('Отложить обращение') + mF('Дата следующего выполнения', 1, dt(Object.assign({ id: 'mDate', bind: 'ui.m.date', time: true, err: e.date, errField: 'date' }, ek))) + mF('Город', 1, sel(Object.assign({ id: 'mCity', bind: 'ui.m.city', opts: POSTPONE_CITIES, err: e.city, errField: 'city' }, ek))) + mF('Причина, по которой отложено', 1, sel(Object.assign({ id: 'mReason', bind: 'ui.m.reason', opts: POSTPONE_REASONS, err: e.reason, errField: 'reason' }, ek))) + mF('Метки', 0, sel({ id: 'mLabels', bind: 'ui.m.labels', opts: LABELS, multi: true })) + mF('Назначенная группа', 1, sel(Object.assign({ id: 'mGroup', bind: 'ui.m.group', opts: GROUPS, err: e.group, errField: 'group' }, ek))) + `<div class="foot"><button class="btn" data-act="mClose">Отмена</button><button class="btn pri" data-act="mSubmit">Сохранить</button></div>`;
+  if (md.name === 'postpone' && V2) h = head('Отложить обращение') + mF('Отложить до', 1, dt(Object.assign({ id: 'mDate', bind: 'ui.m.date', time: true, err: e.date, errField: 'date' }, ek)) + `<div class="quick">${[['1 час', 1], ['3 часа', 3], ['4 часа', 4], ['Завтра 10:00', 'tm']].map(([l, v]) => `<button class="btn" data-act="mQuick" data-v="${v}">${l}</button>`).join('')}</div>`) + mF('Ответственная группа', 0, sel({ id: 'mGroup', bind: 'ui.m.group', opts: GROUPS_UI() })) + mF('Комментарий', 0, ta('ui.m.comment', { h: 90 })) + `<div class="foot"><button class="btn link" data-act="mClose">Отменить</button><button class="btn pri" data-act="mSubmit">Отложить</button></div>`;
+  if (md.name === 'transfer') h = head('Передать обращение') + mF(V2 ? 'Ответственная группа' : 'Назначенная группа', 1, sel(Object.assign({ id: 'mGroup', bind: 'ui.m.group', opts: GROUPS_UI(), err: e.group, errField: 'group', after: () => { S.ui.m.resp = ''; save(); render(); } }, ek))) + mF(V2 ? 'Ответственный сотрудник' : 'Ответственный', 0, V2 ? sel({ id: 'mResp', bind: 'ui.m.resp', opts: groupStaff(m.group), dis: !m.group, ph: m.group ? 'Выберите значение' : '---' }) : sel({ id: 'mResp', bind: 'ui.m.resp', opts: STAFF_RESP.filter(x => x !== OPERATOR) })) + (V2 ? mF('Комментарий', 0, ta('ui.m.comment', { h: 90 })) : '') + `<div class="foot"><button class="btn ${V2 ? 'link' : ''}" data-act="mClose">${V2 ? 'Отменить' : 'Отмена'}</button><button class="btn pri" data-act="mSubmit">Передать</button></div>`;
+  if (md.name === 'close') h = head('Закрытие обращения') + mF('Причина закрытия', 1, sel(Object.assign({ id: 'mReason', bind: 'ui.m.reason', opts: SC_META.closeReasons || CLOSE_REASONS, err: e.reason, errField: 'reason' }, ek))) + mF('Создать новое обращение', 0, sel({ id: 'mNew', bind: 'ui.m.createNew', opts: ['Да', 'Нет'], clear: false })) + mF('Комментарий', 0, ta('ui.m.comment', { h: 90 })) + `<div class="foot"><button class="btn link" data-act="mClose">Отменить</button><button class="btn red" data-act="mSubmit">Закрыть обращение</button></div>`;
   if (md.name === 'zapisDone') h = head('Создать связанное обращение?') + `<p style="font-size:17px;margin:4px 0 26px">Если продолжить работу с обращением, то можно будет добавлять новые записи</p><div class="foot" style="justify-content:flex-start"><button class="btn pri" data-act="zdFinish">Завершить обращение</button><button class="btn link" data-act="mClose">Продолжить работу</button></div>`;
-  if (md.name === 'new') { const t = S.tickets[md.ticket]; const P = pat(t.pid); h = head('Создание обращения') + mF('Пациент', 1, sel({ id: 'mPt', value: String(P.id), opts: [{ v: String(P.id), l: P.id + ' ' + P.name }], dis: true, clear: false })) + mF('Категория обращения', 1, sel(Object.assign({ id: 'mCat', bind: 'ui.m.cat', opts: Object.values(TICKET_TYPES), err: e.cat, errField: 'cat' }, ek))) + `<div class="f">${tgl('ui.m.me', 'Сделать меня ответственным')}</div>` + mF('Ответственная группа', 0, sel({ id: 'mGroup', bind: 'ui.m.group', opts: GROUPS, dis: !!m.me })) + mF('Ответственный сотрудник <span class="muted tip" data-tip="Заполняется автоматически">(?)</span>', 0, sel({ id: 'mResp', value: m.me ? OPERATOR : '---', opts: [OPERATOR], dis: true, clear: false })) + mF('Комментарий к новому обращению <span class="muted">(?)</span>', 0, ta('ui.m.comment', { h: 90 })) + `<div class="foot"><button class="btn" data-act="mClose">Отменить</button><button class="btn red" data-act="mSubmit">Создать обращение</button></div>`; }
+  if (md.name === 'new') { const t = S.tickets[md.ticket]; const P = pat(t.pid); h = head('Создание обращения') + mF('Пациент', 1, sel({ id: 'mPt', value: String(P.id), opts: [{ v: String(P.id), l: P.id + ' ' + P.name }], dis: true, clear: false })) + mF('Категория обращения', 1, sel(Object.assign({ id: 'mCat', bind: 'ui.m.cat', opts: SC_META.newCategories || Object.keys(TICKET_TYPES).filter(k => k !== 'hosp').map(k => TICKET_TYPES[k]), err: e.cat, errField: 'cat' }, ek))) + `<div class="f">${tgl('ui.m.me', 'Сделать меня ответственным', 'mRe')}</div>` + mF('Ответственная группа', 0, sel({ id: 'mGroup', bind: 'ui.m.group', opts: GROUPS_UI(), dis: !!m.me, after: () => { S.ui.m.resp = ''; save(); render(); } })) + mF('Ответственный сотрудник <span class="muted tip" data-tip="Заполняется после выбора группы">(?)</span>', 0, m.me ? sel({ id: 'mResp', value: OPERATOR, opts: [OPERATOR], dis: true, clear: false }) : sel({ id: 'mResp', bind: 'ui.m.resp', opts: groupStaff(m.group), dis: !m.group, ph: m.group ? 'Выберите значение' : '---' })) + mF('Комментарий к новому обращению <span class="muted tip" data-tip="Увидит тот, кто возьмёт обращение">(?)</span>', 0, ta('ui.m.comment', { h: 90 })) + `<div class="foot"><button class="btn ${V2 ? 'link' : ''}" data-act="mClose">Отменить</button><button class="btn red" data-act="mSubmit">Создать обращение</button></div>`; }
   if (md.name === 'allMap') { MAPCB.allMap = pid => ACT.clinicInfo({ dataset: { id: pid } }); const list = CLINICS.filter(c => c.inProgram); h = head('Клиники на карте') + mapHTML('allMap', list.map(c => ({ id: c.id, x: c.x, y: c.y, label: c.name, color: c.color === 'red' ? 'red' : 'grey' })), { h: 620, k: 0.7, tx: -230, ty: -220 }); return `<div class="mbg" data-act="mBg"><div class="modal wide" style="width:1200px">${h}</div></div>`; }
   if (md.name === 'cancelRecord') h = head('Отменить запись?') + `<p>Все введённые данные этой записи будут удалены.</p><div class="foot"><button class="btn" data-act="mClose">Нет</button><button class="btn red" data-act="mSubmit">Да, отменить</button></div>`;
   if (md.name === 'rgp') h = head('Подсказки для расширенного ГП') + `<p><b>Расширенное ГП</b> — только если совпали все пять условий:</p><ol><li>Продукт пациента — ДМС;</li><li>Пациент зелёный, жёлтый (оранжевый), синий или бесцветный;</li><li>Клиника доступна (входит в программу);</li><li>В комментарии клиники нет заметки про обычное ГП;</li><li>Клиника бесцветная, зелёная (фиолетовая), жёлтая или оранжевая.</li></ol><p><b>Обычное ГП</b> — достаточно одного: пациент физлицо или партнёрка; пациент красный; запись в недоступную клинику; в комментарии клиники заметка про обычное ГП; клиника красная.</p><div class="foot"><button class="btn pri" data-act="mClose">Понятно</button></div>`;
   return `<div class="mbg" data-act="mBg"><div class="modal">${h}</div></div>`;
 }
 ACT.mBg = (a, e) => { if (e.target === a) ACT.mClose(); };
+ACT.mQuick = a => { const v = a.dataset.v; const d = new Date(); if (v === 'tm') { d.setDate(d.getDate() + 1); d.setHours(10, 0, 0, 0); } else d.setHours(d.getHours() + +v); S.ui.m.date = isoD(d) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()); save(); render(); };
+ACT.repeatAppeal = a => { const id = +a.dataset.id; log('click', { target: 'Повторное обращение', ticket: id }); S.ui.m = { cat: '', me: true, group: '', resp: '', comment: '', err: {} }; S.ui.modal = { name: 'new', ticket: id }; save(); render(); };
 AFTER.mRe = () => { save(); render(); };
 ACT.zdFinish = () => { const md = S.ui.modal; S.ui.modal = null; log('modal_submit', { modal: 'zapisDone', ticket: md.ticket, choice: 'Завершить обращение' }); finishTicket(S.tickets[md.ticket], 6); };
 ACT.mClose = () => { if (S.ui.modal) log('modal_cancel', { modal: S.ui.modal.name }); S.ui.modal = null; save(); render(); };
 ACT.mSubmit = () => {
   const md = S.ui.modal, m = S.ui.m; const t = S.tickets[md.ticket]; const err = {};
   const need = ks => ks.forEach(k => { const v = m[k]; if (!v || (Array.isArray(v) && !v.length)) err[k] = 1; });
-  if (md.name === 'postpone') { need(['date', 'city', 'reason', 'group']); if (m.date && !m.date.includes(' ')) err.date = 1; }
+  if (md.name === 'postpone') { need(V2 ? ['date'] : ['date', 'city', 'reason', 'group']); if (m.date && !m.date.includes(' ')) err.date = 1; }
   if (md.name === 'transfer') need(['group']);
-  if (md.name === 'close') { need(['reason']); if (m.createNew && !m.newType) err.newType = 1; }
+  if (md.name === 'close') need(['reason']);
   if (md.name === 'new') need(['cat']);
   if (Object.keys(err).length) { m.err = err; save(); log('validation_error', { modal: md.name, fields: Object.keys(err) }); render(); return; }
   log('modal_submit', { modal: md.name, ticket: md.ticket, data: Object.assign({}, m, { err: undefined }) });
   S.ui.modal = null;
-  if (md.name === 'postpone') { t.status = 'Отложено'; t.hidden = true; t.postpone = { date: m.date, city: m.city, reason: m.reason, labels: m.labels, group: m.group }; addChange(t, `Отложено до ${showVal(m.date, true)} · ${m.reason} · ${m.group}`); save(); toast('Обращение отложено', `до ${showVal(m.date, true)}`); go('#/appeals'); return; }
-  if (md.name === 'transfer') { t.status = 'Передано'; t.hidden = true; t.transfer = { group: m.group, resp: m.resp }; t.resp = m.resp || '-'; t.group = m.group; addChange(t, 'Передано: ' + m.group + (m.resp ? ' / ' + m.resp : '')); save(); toast('Обращение передано', m.group); go('#/appeals'); return; }
+  if (md.name === 'postpone') { t.status = V2 ? 'Отложено до ' + showVal(m.date, true) : 'Отложено'; t.hidden = true; t.postpone = { date: m.date, city: m.city, reason: m.reason, labels: m.labels, group: m.group, comment: m.comment }; if (m.comment) t.comments.push({ date: fmtDT(nowD()), who: OPERATOR, text: m.comment }); addChange(t, `Отложено до ${showVal(m.date, true)}${m.reason ? ' · ' + m.reason : ''}${m.group ? ' · ' + m.group : ''}`); save(); toast('Обращение отложено', `до ${showVal(m.date, true)}`); go('#/appeals'); return; }
+  if (md.name === 'transfer') { t.status = V2 ? 'Передано: ' + m.group : 'Передано'; t.hidden = true; t.transfer = { group: m.group, resp: m.resp }; t.resp = m.resp || '-'; t.group = m.group; if (m.comment) t.comments.push({ date: fmtDT(nowD()), who: OPERATOR, text: m.comment }); addChange(t, 'Передано: ' + m.group + (m.resp ? ' / ' + m.resp : '')); save(); toast('Обращение передано', m.group); go('#/appeals'); return; }
   if (md.name === 'close') {
-    t.status = 'Закрыто'; t.done = true; t.closeReason = m.reason; addChange(t, 'Закрыто: ' + m.reason + (m.comment ? ' · ' + m.comment : ''));
+    t.status = 'Завершено'; t.done = true; t.closeReason = m.reason; addChange(t, 'Обращение закрыто: ' + m.reason + (m.comment ? ' · ' + m.comment : ''));
     if (m.comment) t.comments.push({ date: fmtDT(nowD()), who: OPERATOR, text: m.comment });
-    toast(`Для пациента ${t.pid} ${pat(t.pid).name}`, `Было закрыто обращение №${t.id}`);
-    if (m.createNew && m.newType) { const type = Object.keys(TICKET_TYPES).find(k => TICKET_TYPES[k] === m.newType); const nt = newTicket(type, '', true, null, t.pid, t.whom); nt.linked = t.id; addChange(t, 'Создано новое обращение №' + nt.id + ' «' + m.newType + '»'); save(); toast('Создано обращение «' + m.newType + '»', '№' + nt.id); go('#/appeal/' + nt.id); return; }
+    const P = pat(t.pid);
+    if (m.createNew === 'Да') { toast(`Для пациента ${P.id} ${P.name}`, `Было закрыто обращение №${t.id}`); S.ui.m = { cat: '', me: true, group: '', resp: '', comment: '', err: {} }; S.ui.modal = { name: 'new', ticket: t.id }; }
+    else toast('Обращение закрыто', '№' + t.id);
     save(); render(); return;
   }
-  if (md.name === 'new') { const type = Object.keys(TICKET_TYPES).find(k => TICKET_TYPES[k] === m.cat); const nt = newTicket(type, m.comment || '', !!m.me, m.group, t.pid, t.whom); addChange(t, 'Создано связанное обращение №' + nt.id); save(); toast('Обращение создано', '№' + nt.id + (m.me ? ' — в ваших обращениях' : ' — передано в ' + (m.group || 'очередь'))); render(); return; }
+  if (md.name === 'new') { const type = Object.keys(TICKET_TYPES).find(k => TICKET_TYPES[k] === m.cat); const nt = newTicket(type, m.comment || '', !!m.me, m.group, t.pid, t.whom); if (!m.me && m.resp) nt.resp = m.resp; nt.linked = t.id; addChange(t, 'Создано связанное обращение №' + nt.id); save(); toast('Обращение создано', '№' + nt.id + (m.me ? '' : ' — ' + (m.group || 'без группы'))); go('#/appeal/' + nt.id); return; }
   if (md.name === 'cancelRecord') { t.form = {}; t.step = 1; addChange(t, 'Запись отменена оператором'); save(); toast('Запись отменена', '', 'warn'); render(); return; }
   save(); render();
 };
@@ -1538,6 +1637,7 @@ function filteredClinics(f) {
     if (fl.stype && !(fl.stype === 'Стоматология' ? c.type === 'Стоматология' : fl.stype === 'Поликлиника' ? ['Поликлиника', 'МРТ-центр', 'Лаборатория'].includes(c.type) : false)) return false;
     if (fl.price && c.price !== fl.price.trim()) return false;
     if (fl.q && !c.name.toLowerCase().includes(fl.q.toLowerCase())) return false;
+    if ((f.rejected || []).some(r => r.id === c.id)) return false;
     return true;
   });
 }
@@ -1552,7 +1652,7 @@ function zStep2(t, f, B) {
     <div class="pop-grid"><span>Адрес</span><span>Провайдер</span><span>ГП</span><span>Франшиза</span><b>${esc(pop.addr)}</b><b>«Лучи» (BestDoctor)</b><b>${pop.gp}</b><b>Нет</b></div>
     <div class="pop-grid" style="margin-top:22px;grid-template-columns:auto auto"><span>Входит в программу</span><span>Доступно для пациента</span><b class="${pop.inProgram ? '' : 'red'}">${pop.inProgram ? 'Входит в программу' : 'Не входит в программу'}</b><span style="color:#222">${progIcons(clinicAvail(pop))}</span></div>
     <div style="display:grid;grid-template-columns:minmax(170px,auto) minmax(120px,1fr) minmax(120px,1fr);gap:20px;margin-top:26px"><div><b>Время работы</b><br>${hoursHTML(pop)}</div><div><b>Контакты</b><div class="phones">${phoneLines(pop)}</div></div><div><b>Комментарий</b><div class="cl-comment" style="margin-top:0">${commentLines(pop)}</div></div></div>
-    <div class="actions-row" style="margin-top:20px;align-items:center"><div class="btn-row"><button class="btn pri" data-act="zPick" data-id="${pop.id}">✓ Выбрать</button><button class="btn" data-act="zReject" data-id="${pop.id}">✕ Клиника не подошла</button></div><a data-act="complain" style="display:flex;gap:6px;align-items:center">${I.bubble} Пожаловаться на контент</a></div></div>` : '';
+    <div class="actions-row" style="margin-top:20px;align-items:center"><div class="btn-row"><button class="btn pri" data-act="zPick" data-id="${pop.id}">✓ Выбрать</button><button class="btn" data-act="zReject" data-id="${pop.id}">Эта клиника не подходит</button></div><a data-act="complain" style="display:flex;gap:6px;align-items:center">${I.bubble} Пожаловаться на контент</a></div></div>` : '';
   return stepTitle('Согласование времени и врача') + `<div class="summary"><div><span>Запись за счёт</span>${f.selfPay ? 'Пациента' : 'Компании'}</div><div><span>Услуга</span>${esc(f.service || '-')}</div><div><span>Источник записи</span>${esc(f.source || '-')}</div><div><span>Способ коммуникации</span>${esc(f.comm || '-')}</div></div>
   <div class="summary"><div><span>Желаемое время</span>${f.wishDate || '-'}</div><div><span>Желаемая клиника</span>${esc(f.wishClinic ? cName(f.wishClinic) : '-')}</div><div><span>Желаемый врач</span>${esc(f.wishDoctor || '-')}</div></div><hr class="sep" style="margin-top:0">
   <div style="margin:50px 0 14px">Клиника</div>
@@ -1566,12 +1666,14 @@ function zStep2(t, f, B) {
    <div class="f"><label>Ценовые категории</label>${sel({ id: 'zPr', bind: F + '.price', opts: PRICE_CATS.map(p => ({ v: p[0], l: p[0], dot: p[1] })), ph: '', after: refilter })}</div></div>
    <div class="cp-toggles">${tgl(F + '.online', 'Только клиники с онлайн-записью', 'zflt')}${tgl(F + '.inProgram', 'Только клиники в программе', 'zflt')}${tgl(F + '.reimb', 'Клиники по возмещению', 'zflt')}${tgl(F + '.goodCall', 'Только клиники с хорошей дозваниваемостью', 'zflt')}${tgl(F + '.noFr', 'Только клиники без франшизы', 'zflt')}</div></div>
    <div style="flex:1;min-width:0;position:relative;display:flex">${mapHTML('zmap', zPins(f))}</div>${popup}</div>
+  ${(f.rejected || []).length ? `<div class="pick-hist"><div class="ph-title">История подбора</div>${f.rejected.map(r => { const c = cById(r.id); return `<div class="ph-row"><div><b>${esc(c.name)}</b><span>${esc(c.addr)}</span></div><span class="muted">${esc(r.at)}</span><button class="btn" data-act="zReturn" data-id="${c.id}">Вернуть клинику</button></div>`; }).join('')}</div>` : ''}
   ${zBtns(`<button class="btn pri" data-act="zNext" data-s="2">Продолжить</button>`)}`;
 }
 document.addEventListener('input', e => { if (e.target.dataset.live === 'zq') { const t = S.tickets[+route().id]; if (!t || !MAPS.zmap) return; MAPS.zmap.pins = zPins(t.form); mapApply('zmap'); } });
 ACT.zPopClose = () => { const t = curTicket(); t.form.popClinic = ''; save(); render(); };
 ACT.zPick = a => { const t = curTicket(); const c = cById(a.dataset.id); const f = t.form; f.clinic = c.id; f.popClinic = ''; if (f.gpToClinic !== c.id) { f.gpTo = c.email ? [c.email] : []; f.gpToClinic = c.id; } addChange(t, 'Выбрана клиника: ' + c.name); log('clinic_select', { ticket: t.id, clinic: c.name, color: c.color, inProgram: c.inProgram }); t.step = 3; save(); toast('Клиника сохранена'); render(); toForm(); };
-ACT.zReject = a => { const t = curTicket(); const c = cById(a.dataset.id); t.form.popClinic = ''; log('clinic_reject', { ticket: t.id, clinic: c.name }); save(); toast('Отмечено: клиника не подошла', c.name, 'info'); render(); };
+ACT.zReject = a => { const t = curTicket(); const c = cById(a.dataset.id); t.form.popClinic = ''; t.form.rejected = (t.form.rejected || []).filter(r => r.id !== c.id).concat([{ id: c.id, at: fmtT(nowD()) }]); log('clinic_reject', { ticket: t.id, clinic: c.name }); save(); render(); };
+ACT.zReturn = a => { const t = curTicket(); const c = cById(a.dataset.id); t.form.rejected = (t.form.rejected || []).filter(r => r.id !== c.id); log('clinic_return', { ticket: t.id, clinic: c.name }); ACT.zPick({ dataset: { id: c.id } }); };
 function zStep3(t, f, B) {
   const c = cById(f.clinic); const e = f._err || {}; const ek = { errKey: B + '._err' };
   if (f.gpText == null) f.gpText = '';
@@ -1669,14 +1771,14 @@ ACT.zFinish = () => finishTicket(curTicket(), 6);
    ============================================================ */
 function konsultView(t) {
   const f = t.form; const B = `tickets.${t.id}.form`; const e = f._err || {}; const ek = { errKey: B + '._err' };
-  if (f.source == null) f.source = 'Другое';
+  const KS = SC_META.konsultSources || KONSULT_SOURCES; if (f.source == null) f.source = KS.includes('Другое') ? 'Другое' : '';
   if (t.done && f.finished) return stepTitle('Создать консультацию') + `<div class="f-grid"><div class="f"><div class="muted">Подтема</div>${esc(f.sub)}</div><div class="f"><div class="muted">Описание</div><div style="white-space:pre-wrap">${esc(f.desc)}</div></div><div class="f"><div class="muted">Источник обращений</div>${esc(f.source)}</div><div class="f"><div class="muted">Результат консультации</div><div style="white-space:pre-wrap">${esc(f.result)}</div></div></div>`;
   const dis = t.done;
-  return stepTitle('Создать консультацию') + `<div class="f-grid"><div class="f"><label class="req">Подтема</label>${sel(Object.assign({ id: 'kSub', bind: B + '.sub', opts: KONSULT_SUBTOPICS, err: e.sub, errField: 'sub', dis }, ek))}</div><div class="f"><label class="req">Описание</label>${ta(B + '.desc', { err: e.desc, h: 46 })}</div>
-  <div class="f"><label class="req">Источник обращений</label>${sel(Object.assign({ id: 'kSrc', bind: B + '.source', opts: KONSULT_SOURCES, err: e.source, errField: 'source', dis }, ek))}</div><div class="f"><label class="req">Результат консультации</label>${ta(B + '.result', { err: e.result, h: 46 })}</div></div>
-  ${dis ? '' : `<div class="btn-row"><button class="btn pri" data-act="kSave">Сохранить</button><button class="btn pri" data-act="kDone">Завершить</button><button class="btn" data-act="kDone" data-rel="1">Завершить и создать связанное обращение</button></div>`}`;
+  return stepTitle('Создать консультацию') + `<div class="f-grid"><div class="f"><label class="req">Подтема</label>${sel(Object.assign({ id: 'kSub', bind: B + '.sub', opts: SC_META.konsultSubtopics || KONSULT_SUBTOPICS, err: e.sub, errField: 'sub', dis }, ek))}</div><div class="f"><label class="req">Описание</label>${ta(B + '.desc', { err: e.desc, h: 46 })}</div>
+  <div class="f"><label class="req">Источник обращений</label>${sel(Object.assign({ id: 'kSrc', bind: B + '.source', opts: KS, err: e.source, errField: 'source', dis }, ek))}</div><div class="f"><label class="${V2 ? '' : 'req'}">Результат консультации</label>${ta(B + '.result', { err: e.result, h: 46 })}</div></div>
+  ${dis ? '' : V2 ? `<div class="btn-row"><button class="btn pri" data-act="kSave">Сохранить</button></div>` : `<div class="btn-row"><button class="btn pri" data-act="kSave">Сохранить</button><button class="btn pri" data-act="kDone">Завершить</button><button class="btn" data-act="kDone" data-rel="1">Завершить и создать связанное обращение</button></div>`}`;
 }
-ACT.kSave = () => { const t = curTicket(); addChange(t, 'Консультация сохранена'); log('konsult_save', { ticket: t.id, form: snap(t.form) }); save(); toast('Сохранено'); };
+ACT.kSave = () => { const t = curTicket(); if (V2) { const f = t.form; const err = {}; ['sub', 'desc', 'source'].forEach(k => { if (!String(f[k] || '').trim()) err[k] = 1; }); if (Object.keys(err).length) { f._err = err; save(); log('validation_error', { ticket: t.id, fields: Object.keys(err) }); render(); return; } f._err = {}; render(); } addChange(t, 'Консультация сохранена'); log('konsult_save', { ticket: t.id, form: snap(t.form) }); save(); toast('Сохранено'); };
 ACT.kDone = a => {
   const t = curTicket(); const f = t.form; const err = {};
   ['sub', 'desc', 'source', 'result'].forEach(k => { if (!(f[k] || '').trim()) err[k] = 1; });
@@ -1769,6 +1871,16 @@ ACT.zhSend = () => {
 };
 
 /* ============================================================
+   ГОСПИТАЛИЗАЦИЯ (категория из правки 8.8; поля в инструкции не описаны — минимальная форма)
+   ============================================================ */
+function hospView(t) {
+  const f = t.form; const B = `tickets.${t.id}.form`; const e = f._err || {};
+  return stepTitle('Госпитализация') + `<div class="f-grid"><div class="f"><label class="req">Описание</label>${ta(B + '.desc', { err: e.desc, h: 120 })}</div><div class="f"><label>Клиника / комментарий</label>${ta(B + '.note', { h: 120 })}</div></div>
+  ${t.done ? '' : `<div class="btn-row"><button class="btn pri" data-act="hSave">Сохранить</button></div>`}`;
+}
+ACT.hSave = () => { const t = curTicket(); const f = t.form; if (!String(f.desc || '').trim()) { f._err = { desc: 1 }; save(); render(); return; } f._err = {}; addChange(t, 'Госпитализация: сохранено'); log('hosp_save', { ticket: t.id, form: snap(f) }); save(); toast('Сохранено'); render(); };
+
+/* ============================================================
    Блок «Информация» и страницы, которые открываются по номеру:
    запись, гарантийное письмо, согласование, телемед-консультация
    ============================================================ */
@@ -1805,7 +1917,7 @@ function infoTable(k, t, pid) {
   if (k === 'hist') {
     const list = Object.values(S.tickets).filter(x => x.arrived && (x.pid === pid || +x.whom === pid)).sort((a, b) => dtKey(b.created) - dtKey(a.created) || b.id - a.id);
     return tbl(['Номер', 'Создано ' + sortIco, 'Тема', 'Статус', 'Описание', 'Владелец'], list.map(x => { const d = histDesc(x); const own = x.owner != null ? x.owner : login(x.resp === '-' ? '' : x.resp);
-      return `<tr><td><a data-act="histOpen" data-id="${x.id}">${x.id}</a></td><td>${dtCell(x.created)}</td><td>${esc(x.topic || TICKET_TYPES[x.type])}</td><td>${esc(x.status === 'Закрыто' ? 'Завершено' : x.status)}</td><td class="ell" title="${esc(d)}">${esc(d)}</td><td>${esc(own)}</td></tr>`; }));
+      return `<tr><td><a data-act="histOpen" data-id="${x.id}">${x.id}</a></td><td>${dtCell(x.created)}</td><td>${esc(x.topic || TICKET_TYPES[x.type])}</td><td>${esc(x.histStatus || (x.status === 'Закрыто' ? 'Завершено' : x.status))}</td><td class="ell" title="${esc(d)}">${esc(d)}</td><td>${esc(own)}</td></tr>`; }));
   }
   if (k === 'visits') return tbl(['Номер', 'Клиника', 'Услуга или продукт', 'Дата', 'Врач', 'Способ связи', 'Статус'], P.visits.slice().sort((a, b) => dtKey(b.agreed || b.created) - dtKey(a.agreed || a.created)).map(v => `<tr><td><a data-act="openVisit" data-id="${v.id}">${v.id}</a></td><td>${v.wishClinic != null && v.ticket ? `<div><b>Желаемая:</b> ${esc(v.wishClinic ? cName(v.wishClinic) : '-')}</div><div><b>Выбранная:</b> ${esc(cName(v.clinic))}</div>` : esc(cName(v.clinic))}</td><td>${esc(v.service)}${v.onlineSlot ? ' <span class="slot-badge">Записан в онлайн-слот</span>' : ''}</td><td>${v.ticket ? `<div><b>Желаемая:</b> ${esc(v.wish || '-')}</div><div><b>Согласованная:</b> ${esc(v.agreed || '-')}</div>` : dtCell(v.agreed || '-')}</td><td>${esc(v.doctor || '-')}</td><td>${esc(v.comm || '-')}</td><td>${esc(v.status)}</td></tr>`));
   if (k === 'gp') return tbl(['Номер', 'Статус', 'Дата отправки', 'Получатель', 'Клиника', 'Услуги', 'Ответственный', 'Создатель'], P.gps.slice().sort((a, b) => dtKey(b.created) - dtKey(a.created)).map(g => `<tr><td><a data-act="openGp" data-id="${g.id}">${g.id}</a></td><td>${esc(g.status)}</td><td>${g.sent && g.sent !== '-' ? dtCell(g.sent) : '—'}</td><td>${(g.to || []).length ? esc(g.to[0]) : '—'}</td><td>${esc(cName(g.clinic))}</td><td>${g.listServices === false ? '' : gpServQ(g.services)}</td><td>${esc(login(g.resp))}</td><td>${esc(login(g.creator))}</td></tr>`));
@@ -1820,7 +1932,7 @@ ACT.openResume = a => { log('resume_open', { telemed: a.dataset.id }); openTab('
 function resumePage(id) {
   const x = findTelemed(id); if (!x) return '<div class="ban y">Резюме не найдено</div>';
   const m = x.m, P = pat(x.pid); const nl = s => esc(s || '-').replace(/\n/g, '<br>');
-  return `<div class="a4-wrap"><div class="a4"><div class="a4-org">Виртуальная клиника «Лучи»</div><h1>Резюме онлайн-консультации</h1>
+  return `<div class="a4-wrap"><div class="a4"><div class="a4-org">Виртуальная клиника «Лучи»</div><h1>Резюме консультации</h1>
   <div class="a4-sec"><div><b>Пациент:</b> ${esc(P.name)}</div><div><b>Дата рождения:</b> ${esc(P.birth)}</div><div><b>Номер полиса:</b> ${esc(P.program.policy)}</div></div>
   <div class="a4-sec"><div><b>Врач:</b> ${esc(m.doctor)}, ${esc(String(m.spec || '').toLowerCase())}</div><div><b>Дата консультации:</b> ${esc(m.date)}</div></div>
   <h2>Консультация</h2>
@@ -1988,6 +2100,7 @@ window.addEventListener('message', e => {
   const d = e.data; if (!d || d.source !== 'luchi-lms') return;
   if (d.type === 'client-message') clientSay(d.text, d.ticketId);
   if (d.type === 'reset') CRM.reset();
+  if (d.type === 'cmd' && CMD[d.cmd]) { try { CMD[d.cmd](d.data || {}); } catch (x) { console.error(x); } return; }
   if (d.type === 'get-result' && e.source) e.source.postMessage({ source: 'luchi-crm', type: 'result', result: resultSummary(), log: S.log }, '*');
 });
 

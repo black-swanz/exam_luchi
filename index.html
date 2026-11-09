@@ -599,6 +599,38 @@ h1,h2,h3,.display{font-family:var(--font-display);font-weight:900;text-transform
 .sp-cbtns{display:flex;justify-content:center;gap:20px;margin:20px 0 18px}
 .sp-hang{width:64px;height:64px;border-radius:50%;background:#fa5252!important;color:#fff!important;display:inline-grid;place-items:center;box-shadow:0 6px 16px rgba(250,82,82,.35)}
 .sp-hang svg{width:28px;height:28px;transform:rotate(135deg)}
+/* ---------- 8.10: управление кейсами, тикет от коуча, входящие звонки ---------- */
+.icb.solid{color:var(--white)}
+.icb.danger.solid{background:var(--coral);border-color:var(--coral)}
+.icb.ok{border-color:#2fb36b;color:#5fd68f}.icb.ok.solid{background:#2fb36b;color:var(--white)}
+.icb.ok:hover{background:#249457;border-color:#249457;color:var(--white)}
+.icb.pri{border-color:var(--ice);color:var(--ice)}.icb.pri:hover{background:var(--ice);color:var(--ink)}
+.cctl{flex-basis:100%;display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding-top:4px}
+.ctl-sel select{background:rgba(var(--white-rgb),.06);color:var(--sand);border:1.5px solid rgba(var(--sand-rgb),.25);border-radius:var(--pill);padding:7px 12px;font-size:13px}
+.ctl-sel option{color:#111}
+.ctl-note{font-size:12.5px;color:rgba(var(--white-rgb),.6);margin-left:6px}.ctl-note b{color:var(--sand);font-weight:500}
+.cmodal{position:fixed;inset:0;background:rgba(0,10,14,.6);display:flex;align-items:center;justify-content:center;z-index:60}
+.cm-card{width:min(520px,calc(100vw - 32px));max-height:calc(100vh - 40px);overflow:auto;background:#fff;color:#1b2430;border-radius:12px;padding:20px 22px;display:flex;flex-direction:column;gap:12px;box-shadow:0 20px 60px rgba(0,0,0,.4)}
+.cm-h{display:flex;align-items:center}.cm-h b{font-size:18px}.cm-h .sp{flex:1}.cm-x{font-size:18px;color:#667}
+.cm-card label{display:flex;flex-direction:column;gap:5px;font-size:13px;color:#4a5361}
+.cm-card select,.cm-card textarea{border:1px solid #cdd3dc;border-radius:6px;padding:8px 10px;font-size:14px;color:#1b2430;background:#fff}
+.cm-card select:disabled{background:#f0f2f5;color:#99a}
+.cm-f{display:flex;justify-content:flex-end;gap:10px;padding-top:4px}.cm-f .icb:not(.solid){color:#4a5361;border-color:#cdd3dc}
+#cCalls{position:fixed;right:18px;bottom:18px;display:flex;flex-direction:column;gap:10px;z-index:50}
+.ccall{display:grid;grid-template-columns:auto 1fr;grid-auto-flow:row;align-items:center;gap:10px 12px;width:290px;background:#0b3440;border:1.5px solid rgba(var(--ice-rgb),.35);border-radius:14px;padding:12px 14px;box-shadow:0 12px 34px rgba(0,0,0,.45);}
+.ccall.ring{border-color:#2fb36b;animation:ccring 1.4s infinite}
+.ccall .cc-tx{display:flex;flex-direction:column;min-width:0}.ccall .cc-b{grid-column:1/-1;display:flex;gap:8px}.ccall .cc-b .icb{flex:1;justify-content:center}.ccall .cc-tx b{font-size:14px;color:var(--sand);font-weight:500}.ccall .cc-tx span{font-size:12.5px;color:rgba(var(--white-rgb),.65)}.ccall i{font-style:normal}
+@keyframes ccring{0%,100%{box-shadow:0 12px 34px rgba(0,0,0,.45),0 0 0 0 rgba(47,179,107,.5)}50%{box-shadow:0 12px 34px rgba(0,0,0,.45),0 0 0 8px rgba(47,179,107,0)}}
+/* звонок у оператора: «Разговор» */
+.sp-dot.gr{background:#2fb36b}
+.sp-conn.talk{color:#2b8a3e}.sp-live{width:9px;height:9px;border-radius:50%;background:#2fb36b;display:inline-block;animation:spdot 1.2s infinite}
+.sp-talk{margin-top:14px;border:1px solid #e3e6ee;border-radius:12px;background:#fff;overflow:hidden}
+.sp-talkh{padding:10px 14px;font-weight:500;border-bottom:1px solid #eef0f5;color:#333}
+.sp-tlist{max-height:260px;overflow:auto;padding:10px 14px;display:flex;flex-direction:column;gap:8px}
+.sp-tl{font-size:14px;color:#222;background:#f3f1fe;border-radius:10px;padding:7px 11px;align-self:flex-start;max-width:85%}
+.sp-tl b{display:block;font-size:11px;color:#7048e8;font-weight:500}
+.sp-tl.me{align-self:flex-end;background:#eef6ff}.sp-tl.me b{color:#1c7ed6}.sp-tl.none{background:none;color:#888;align-self:center}
+.sp-say{border-top:1px solid #eef0f5;padding:8px}.sp-say input{width:100%;border:1px solid #d9dce5;border-radius:8px;padding:9px 12px;font-size:14px;color:#222}
 </style>
 </head>
 <body>
@@ -1260,7 +1292,7 @@ window.LUCHI_SCREENS = {"onb": "<!DOCTYPE html>\n<html lang=\"ru\">\n<head>\n<me
     let P = null, M = null, T = null, O = null;
     let dead = false, locked = false, resultSaved = false, hadThreads = false, mounted = false;
     let mainTab = null, mainWin = null, crmReady = false;
-    let DIR = { pts: {}, phones: [] };
+    let DIR = { pts: {}, phones: [] }; let CM = null; const cmdDone = new Set();
     const mirroring = new Set(), creating = new Set(), delivered = new Set(), noted = new Set();
 
     function prepareCrm(runId) {
@@ -1293,7 +1325,7 @@ window.LUCHI_SCREENS = {"onb": "<!DOCTYPE html>\n<html lang=\"ru\">\n<head>\n<me
       const t = { id, kind: 'crm', el: fr, main: !!opts.main, closable: !opts.main, title: 'Лучи CRM', url: 'crm.luchi.ru/' + (hash || '') };
       fr.addEventListener('load', () => {
         harden(fr.contentWindow, t);
-        if (t.main) { mainWin = fr.contentWindow; crmReady = true; readDirectory(); syncAll(); deliverOutbox(); }
+        if (t.main) { mainWin = fr.contentWindow; crmReady = true; readDirectory(); publishDir(); syncAll(); deliverOutbox(); deliverCmds(); }
         refreshMeta(true);
       });
       $('#bwView').appendChild(fr); tabs.push(t);
@@ -1302,9 +1334,13 @@ window.LUCHI_SCREENS = {"onb": "<!DOCTYPE html>\n<html lang=\"ru\">\n<head>\n<me
     }
     function pageTab(href) {
       const id = 't' + (++seq);
-      const fr = document.createElement('iframe'); fr.className = 'bw-frame'; fr.title = 'Документ'; fr.src = href;
+      const isPdf = /\.pdf($|[?#])/i.test(href);
+      const fr = document.createElement('iframe'); fr.className = 'bw-frame'; fr.title = 'Документ'; fr.src = isPdf && !href.includes('#') ? href + '#toolbar=0&navpanes=0' : href;
       let name = href; try { name = decodeURIComponent(new URL(href).pathname.split('/').pop()) || href; } catch (x) {}
-      const t = { id, kind: 'page', el: fr, main: false, closable: true, title: name, url: 'crm.luchi.ru/files/' + name };
+      let title = name;
+      if (isPdf) { try { const pn = mainWin && mainWin.eval(`(function(u){var p=Object.values(PROGRAMS).find(function(x){return x.url&&decodeURIComponent(new URL(x.url,location.href).href)===u;});return p?(p.name||p.title):'';})(${JSON.stringify(decodeURIComponent(href))})`); if (pn) title = pn; } catch (x) {} }
+      // название файла (ФИО клиента) нигде не показываем — правило 8.11
+      const t = { id, kind: 'page', el: fr, main: false, closable: true, title, url: isPdf ? 'crm.luchi.ru/programs/' + title : 'crm.luchi.ru/files/' + name };
       $('#bwView').appendChild(fr); tabs.push(t); activate(id);
       pushEvent({ type: 'open_file', file: name });
       return t;
@@ -1341,7 +1377,7 @@ window.LUCHI_SCREENS = {"onb": "<!DOCTYPE html>\n<html lang=\"ru\">\n<head>\n<me
             if (title !== t.title || url !== t.url) { t.title = title; t.url = url; changed = true; }
           } catch (e) {}
         } else if (t.kind === 'dialer') {
-          const title = PH.call && !PH.call.ended ? '● Дозвон ' + mmss(store.now() - PH.call.startedAt) : 'Телефония';
+          const title = PH.call && !PH.call.ended ? '● ' + callWord(PH.call) + ' ' + mmss(store.now() - callBase(PH.call)) : 'Телефония';
           if (title !== t.title) { t.title = title; changed = true; }
         }
       });
@@ -1415,6 +1451,53 @@ window.LUCHI_SCREENS = {"onb": "<!DOCTYPE html>\n<html lang=\"ru\">\n<head>\n<me
         DIR = JSON.parse(raw);
       } catch (e) {}
     }
+    // для пульта коуча (8.10): пациенты, кейсы, категории, группы и сотрудники групп
+    function publishDir() {
+      try {
+        const raw = mainWin.eval(`(function(){var g=(typeof GROUPS_UI==='function'?GROUPS_UI():[]),st={};
+          g.forEach(function(x){try{st[x]=typeof groupStaff==='function'?groupStaff(x):[];}catch(e){st[x]=[];}});
+          var nm=function(id){var p=SEED_PATIENTS.find(function(x){return x.id===id});return p?p.name:'';};
+          return JSON.stringify({pts:SEED_PATIENTS.map(function(p){return [p.id,p.name];}),
+            cases:SCENARIO_TICKETS.filter(function(t){return t.case;}).map(function(t){return [t.case,t.id,nm(t.pid)];}),
+            cats:(SC_META.newCategories||Object.keys(TICKET_TYPES).map(function(k){return TICKET_TYPES[k];})),groups:g,staff:st});})()`);
+        if (raw && raw !== publishDir.last) { publishDir.last = raw; store.update(base, { crm: raw }); }
+      } catch (e) {}
+    }
+    // кейс, время с его начала и статус оператора — в список учеников у коуча
+    const OPST = { on: 'На линии', pause: 'Пауза', off: 'Не на линии' };
+    function publishState(S) {
+      const live = Object.values(S.tickets).filter(t => t && t.arrived && !t.past && t.case);
+      const cur = live.filter(t => !t.done).sort((a, b) => (b.arrivedAt || 0) - (a.arrivedAt || 0) || b.case - a.case)[0] || null;
+      let at = null;
+      if (cur) { const a = (S.log || []).filter(x => x.type === 'ticket_arrive' && +x.ticket === cur.id).pop(); at = a ? Date.parse(a.ts) : null; }
+      const c = PH.call && !PH.call.ended ? PH.call : null;
+      const op = c ? (c.answeredAt ? 'Разговор' : 'Дозвон') : (OPST[S.opStatus] || 'Не на линии');
+      const st = { c: cur ? cur.case : 0, id: cur ? cur.id : 0, at: at || 0, op, done: live.filter(t => t.done).map(t => t.case) };
+      const j = JSON.stringify(st); if (j === publishState.last) return; publishState.last = j;
+      store.update(base, { st });
+    }
+    function deliverCmds() {
+      if (dead || !crmReady || !CM || !mainWin) return;
+      Object.entries(CM).filter(([k, o]) => o && !o.dlv && !cmdDone.has(k)).sort((a, b) => (a[1].ts || 0) - (b[1].ts || 0)).forEach(([k, o]) => {
+        cmdDone.add(k);
+        mainWin.postMessage({ source: 'luchi-lms', type: 'cmd', cmd: o.cmd, data: o.data || {} }, '*');
+        store.update('cmds/' + L + '/' + k, { dlv: store.now() });
+        setTimeout(syncAll, 300);
+      });
+    }
+    // «Сбросить кейс»: чаты клиентов кейса у коуча чистим, CRM заново их зеркалит
+    function clearCaseThreads(pids) {
+      const upd = {};
+      (pids || []).forEach(pid => {
+        const th = 'p' + pid;
+        upd['threads/' + L + '/' + th] = null; if (T) delete T[th];
+        Object.entries(M || {}).forEach(([k, m]) => { if (m && m.th === th) { upd['messages/' + L + '/' + k] = null; mirroring.delete(k); noted.delete(k); delete M[k]; } });
+        Object.entries(O || {}).forEach(([k, o]) => { if (o && o.th === th) upd['outbox/' + L + '/' + k] = null; });
+        creating.delete(th);
+      });
+      hadThreads = false;
+      if (Object.keys(upd).length) store.update('', upd).then(() => setTimeout(syncAll, 200));
+    }
     function resolvePhone(num) {
       const k = last10(num); if (k.length < 5) return null;
       const hit = DIR.phones.find(p => last10(p[0]) === k);
@@ -1427,6 +1510,7 @@ window.LUCHI_SCREENS = {"onb": "<!DOCTYPE html>\n<html lang=\"ru\">\n<head>\n<me
       if (dead || !P || M === null || T === null) return;
       if (hadThreads && !Object.keys(T).length) return;   // коуч только что сбросил участника — не воскрешаем данные
       const S = crmState(); if (!S) return;
+      publishState(S);
       if (S.startAt && !P.shiftAt) { P.shiftAt = S.startAt; store.update(base, { shiftAt: S.startAt }); nagHide(); }
       const byPid = {};
       Object.values(S.tickets).forEach(t => { if (t && t.arrived && !t.past) (byPid[t.pid] = byPid[t.pid] || []).push(t); });
@@ -1500,6 +1584,7 @@ window.LUCHI_SCREENS = {"onb": "<!DOCTYPE html>\n<html lang=\"ru\">\n<head>\n<me
       if (ev.type !== 'chat_client') pushEvent(ev);
       if (/^chat_|^ticket_/.test(ev.type)) setTimeout(syncAll, 30);
       if (ev.type === 'exam_start' && P && !P.shiftAt) { P.shiftAt = store.now(); store.update(base, { shiftAt: P.shiftAt }); nagHide(); }
+      if (ev.type === 'case_reset') clearCaseThreads(ev.patients);
       if (ev.type === 'ticket_finish') setTimeout(() => caseNote(ev.ticket, 'finish'), 60);
       if (ev.type === 'modal_submit' && ev.modal === 'close') setTimeout(() => caseNote(ev.ticket, 'close', ev.data && ev.data.reason), 60);
       if (ev.type === 'operator_status' && ev.status === 'off' && P && P.stage === 'exam') askStop();
@@ -1511,7 +1596,7 @@ window.LUCHI_SCREENS = {"onb": "<!DOCTYPE html>\n<html lang=\"ru\">\n<head>\n<me
     }
     function requestResult() { try { mainWin && mainWin.postMessage({ source: 'luchi-lms', type: 'get-result' }, '*'); } catch (e) {} }
 
-    /* ---------- «Телефония» (правка 1): статус, рабочее место, плавающее окно. Клиент не отвечает — звонок в «Дозвоне», пока оператор не сбросит ---------- */
+    /* ---------- «Телефония» (правка 1): статус, рабочее место, плавающее окно. гудки, пока коуч не ответит (8.10), затем «Разговор» ---------- */
     const MY_LINE = '+7 499 709-98-17';
     const QUEUES = [['ВИП-ассистенты', '8024'], ['ВИП-врачи', '8023'], ['Врачи вопросы', '8007'], ['Операторы ВЗР', '8035'], ['Операторы колл-центр', '8004'], ['Операторы КЦ Лайф', '8100'],
       ['Операторы «Лучи Страхование»', '8112'], ['Отдел претензий', '8061'], ['СМП', '8090'], ['Согласование', '8047'], ['Т-Банк Премиум', '8133']];
@@ -1543,6 +1628,8 @@ window.LUCHI_SCREENS = {"onb": "<!DOCTYPE html>\n<html lang=\"ru\">\n<head>\n<me
       chevR: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>',
       x: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>'
     };
+    function callBase(c) { return c.answeredAt || c.startedAt; }
+    function callWord(c) { return c.answeredAt ? 'Разговор' : 'Дозвон'; }
     const hms = ms => { const s = Math.max(0, Math.floor(ms / 1000)); return pad(Math.floor(s / 3600)) + ':' + pad(Math.floor(s / 60) % 60) + ':' + pad(s % 60); };
     const PH = { call: null, ringTimer: null, win: false, tab: 'dial', q: '', num: '', since: Date.now(), pos: null, open: { det: true } };
     const ext = n => digitsOf(n);
@@ -1558,7 +1645,10 @@ window.LUCHI_SCREENS = {"onb": "<!DOCTYPE html>\n<html lang=\"ru\">\n<head>\n<me
       tabs.push(t); renderTabs();
       el.addEventListener('click', spClick);
       el.addEventListener('input', e => { if (e.target.id === 'spNum') { PH.num = e.target.value.replace(/[^\d+*#()\-\s]/g, ''); e.target.value = PH.num; spSyncDial(); } if (e.target.id === 'spQ') { PH.q = e.target.value; spRenderList(); } });
-      el.addEventListener('keydown', e => { if (e.target.id === 'spNum' && e.key === 'Enter') { e.preventDefault(); startCall(); } });
+      el.addEventListener('keydown', e => {
+        if (e.target.id === 'spNum' && e.key === 'Enter') { e.preventDefault(); startCall(); }
+        if (e.target.id === 'spSay' && e.key === 'Enter' && !e.isComposing) { e.preventDefault(); say(e.target.value); e.target.value = ''; }
+      });
       el.addEventListener('mousedown', spDragStart);
       renderCall();
       return t;
@@ -1575,11 +1665,11 @@ window.LUCHI_SCREENS = {"onb": "<!DOCTYPE html>\n<html lang=\"ru\">\n<head>\n<me
     function spSyncDial() { const b = $('#spCall'); if (b) b.disabled = !digitsOf(PH.num).length; }
     function spWindow() {
       const c = PH.call && !PH.call.ended ? PH.call : null;
-      const dur = c ? hms(store.now() - c.startedAt).slice(3) : '';
-      const title = c ? `Дозвон • <span data-sp-dur>${dur}</span>` : ({ contacts: 'Контакты', dial: 'Набор', recent: 'Недавние звонки' }[PH.tab]);
+      const dur = c ? hms(store.now() - callBase(c)).slice(3) : '';
+      const title = c ? `${callWord(c)} • <span data-sp-dur>${dur}</span>` : ({ contacts: 'Контакты', dial: 'Набор', recent: 'Недавние звонки' }[PH.tab]);
       const tabsH = c ? '' : `<div class="sp-wtabs">${[['contacts', I2.user], ['dial', I2.grid], ['recent', I2.phone]].map(([k, ic]) => `<button type="button" class="${PH.tab === k ? 'on' : ''}" data-sptab="${k}" aria-label="${k}">${ic}</button>`).join('')}</div>`;
       let body = '';
-      if (c) body = `<div class="sp-incall"><div class="sp-hash big">#</div><div class="sp-cnum">${esc(c.number)}<button type="button" class="sp-cp" data-copy="${esc(c.number)}">${I2.copy}</button></div>${c.name ? `<div class="sp-cwho">${esc(c.name)}</div>` : ''}<div class="sp-from">Звонок с ${MY_LINE}</div><div class="sp-dz">Дозвон • <span data-sp-dur>${dur}</span></div>
+      if (c) body = `<div class="sp-incall"><div class="sp-hash big">#</div><div class="sp-cnum">${esc(c.number)}<button type="button" class="sp-cp" data-copy="${esc(c.number)}">${I2.copy}</button></div>${c.name ? `<div class="sp-cwho">${esc(c.name)}</div>` : ''}<div class="sp-from">Звонок с ${MY_LINE}</div><div class="sp-dz">${callWord(c)} • <span data-sp-dur>${dur}</span></div>
         <div class="sp-cbtns"><button type="button" class="sp-rb" data-stub="Удержание">${I2.pause}</button><button type="button" class="sp-rb" data-stub="Микрофон">${I2.mic}</button><button type="button" class="sp-rb" data-stub="Клавиатура">${I2.grid}</button></div>
         <button type="button" class="sp-hang" data-hang="1" aria-label="Сбросить">${I2.phone}</button></div>`;
       else if (PH.tab === 'dial') body = `<div class="sp-dial"><button type="button" class="sp-line" data-stub="Выбор линии">Звонок с ${MY_LINE} ${I2.chevR}</button>
@@ -1592,9 +1682,10 @@ window.LUCHI_SCREENS = {"onb": "<!DOCTYPE html>\n<html lang=\"ru\">\n<head>\n<me
     }
     function spPage() {
       const c = PH.call && !PH.call.ended ? PH.call : null;
-      const st = c ? `<span class="sp-dot pur"></span>Дозваниваются <span data-sp-st>${hms(store.now() - c.startedAt)}</span>` : `<span class="sp-dot tq"></span>Не готов <span data-sp-st>${hms(Date.now() - PH.since)}</span>`;
-      const center = c ? `<div class="sp-ccard"><div class="sp-crow2"><div class="sp-hash">#</div><div><div class="sp-cnum">${esc(c.number)}<button type="button" class="sp-cp" data-copy="${esc(c.number)}">${I2.copy}</button></div><div class="sp-mine">Ваш номер: ${MY_LINE}</div></div><span class="sp"></span><div class="sp-conn"><span class="sp-dots"><i></i><i></i><i></i></span>Соединение</div></div>
+      const st = c ? `<span class="sp-dot ${c.answeredAt ? 'gr' : 'pur'}"></span>${c.answeredAt ? 'Разговор' : 'Дозваниваются'} <span data-sp-st>${hms(store.now() - callBase(c))}</span>` : `<span class="sp-dot tq"></span>Не готов <span data-sp-st>${hms(Date.now() - PH.since)}</span>`;
+      const center = c ? `<div class="sp-ccard"><div class="sp-crow2"><div class="sp-hash">#</div><div><div class="sp-cnum">${esc(c.number)}<button type="button" class="sp-cp" data-copy="${esc(c.number)}">${I2.copy}</button></div><div class="sp-mine">Ваш номер: ${MY_LINE}</div></div><span class="sp"></span><div class="sp-conn ${c.answeredAt ? 'talk' : ''}">${c.answeredAt ? '<i class="sp-live"></i>Разговор' : '<span class="sp-dots"><i></i><i></i><i></i></span>Соединение'}</div></div>
           <div class="sp-cfoot"><button type="button" class="sp-rb sm" data-stub="Удержание">${I2.pause}</button><button type="button" class="sp-rb sm" data-stub="Микрофон">${I2.mic}</button><button type="button" class="sp-rb sm" data-stub="Перевод">${I2.transfer}</button><button type="button" class="sp-rb sm" data-stub="Переадресация">${I2.forward}</button><span class="sp"></span><button type="button" class="sp-end" data-hang="1">${I2.phone}Завершить</button></div></div>
+          ${c.answeredAt ? `<div class="sp-talk"><div class="sp-talkh">Разговор с ${esc(c.name || c.number)}</div><div class="sp-tlist" id="spTalk">${talkHtml(c)}</div><div class="sp-say"><input id="spSay" placeholder="Что говорите собеседнику… Enter — сказать" autocomplete="off"></div></div>` : ''}
           <div class="sp-fold"><button type="button" class="sp-fh" data-fold="det">Детали звонка ${I2.chev}</button>${PH.open.det ? `<div class="sp-fb"><div><span>Направление</span>Исходящий</div><div><span>Номер</span>${esc(c.number)}</div><div><span>Линия</span>${MY_LINE}</div><div><span>Начало</span>${hhmm(c.startedAt)}</div></div>` : ''}</div>
           <div class="sp-fold"><div class="sp-fh">Теги <button type="button" class="sp-add" data-stub="Теги">+ Добавить</button></div></div>
           <div class="sp-fold"><div class="sp-fh">Заметки <button type="button" class="sp-add" data-stub="Заметки">+ Добавить</button></div></div>`
@@ -1624,8 +1715,8 @@ window.LUCHI_SCREENS = {"onb": "<!DOCTYPE html>\n<html lang=\"ru\">\n<head>\n<me
     }
     function spTick() {
       const c = PH.call && !PH.call.ended ? PH.call : null;
-      document.querySelectorAll('[data-sp-st]').forEach(e => { e.textContent = c ? hms(store.now() - c.startedAt) : hms(Date.now() - PH.since); });
-      document.querySelectorAll('[data-sp-dur]').forEach(e => { e.textContent = c ? hms(store.now() - c.startedAt).slice(3) : ''; });
+      document.querySelectorAll('[data-sp-st]').forEach(e => { e.textContent = c ? hms(store.now() - callBase(c)) : hms(Date.now() - PH.since); });
+      document.querySelectorAll('[data-sp-dur]').forEach(e => { e.textContent = c ? hms(store.now() - callBase(c)).slice(3) : ''; });
     }
     setInterval(spTick, 1000);
     function spClick(e) {
@@ -1671,7 +1762,7 @@ window.LUCHI_SCREENS = {"onb": "<!DOCTYPE html>\n<html lang=\"ru\">\n<head>\n<me
       PH.win = true;
       store.update('', {
         ['threads/' + L + '/' + th]: { kind: 'call', title: who ? who.name : raw, number: raw, known: !!who, whoKind: who ? who.kind : '', createdAt: now, lastAt: now, status: 'ringing' },
-        ['messages/' + L + '/' + th + '_s']: { th, from: 'system', text: 'Исходящий звонок · ' + raw + (who ? ' · ' + who.name : '') + ' · клиент не отвечает, идёт «Дозвон»', ts: now }
+        ['messages/' + L + '/' + th + '_s']: { th, from: 'system', text: 'Исходящий звонок · ' + raw + (who ? ' · ' + who.name : '') + ' · идут гудки, ждём «Ответить» коуча', ts: now }
       });
       pushEvent({ type: 'call_start', number: raw, name: who ? who.name : '' });
       ringLoop(); renderCall();
@@ -1680,16 +1771,29 @@ window.LUCHI_SCREENS = {"onb": "<!DOCTYPE html>\n<html lang=\"ru\">\n<head>\n<me
       const c = PH.call; if (!c || c.ended) return;
       c.ended = true; stopRing();
       const now = store.now(); const dur = now - c.startedAt;
-      store.update('', {
+      if (by !== 'coach') store.update('', {
         ['threads/' + L + '/' + c.th + '/status']: 'ended', ['threads/' + L + '/' + c.th + '/endedAt']: now,
         ['threads/' + L + '/' + c.th + '/endedBy']: 'operator', ['threads/' + L + '/' + c.th + '/lastAt']: now,
-        ['messages/' + L + '/' + c.th + '_e']: { th: c.th, from: 'system', text: 'Оператор сбросил вызов · «Дозвон» длился ' + mmss(dur), ts: now }
+        ['messages/' + L + '/' + c.th + '_e']: { th: c.th, from: 'system', text: 'Оператор завершил звонок · ' + (c.answeredAt ? 'разговор длился ' + mmss(now - c.answeredAt) : '«Дозвон» длился ' + mmss(dur)), ts: now }
       });
       pushEvent({ type: 'call_end', number: c.number, by, seconds: Math.round(dur / 1000) });
       PH.call = null; PH.num = ''; PH.since = Date.now(); PH.tab = 'dial';
       renderCall();
     }
-    function renderTalk() {}
+    function talkHtml(c) {
+      const ms = Object.entries(M || {}).filter(([, m]) => m && m.th === c.th && (m.from === 'client' || m.from === 'operator')).map(([, m]) => m).sort((a, b) => a.ts - b.ts);
+      return ms.map(m => `<div class="sp-tl ${m.from === 'operator' ? 'me' : ''}"><b>${m.from === 'operator' ? 'Вы' : 'Собеседник'}</b>${esc(m.text)}</div>`).join('') || '<div class="sp-tl none">Собеседник взял трубку. Говорите.</div>';
+    }
+    function say(text) {
+      const c = PH.call; text = String(text || '').trim(); if (!c || c.ended || !c.answeredAt || !text) return;
+      const now = store.now();
+      store.update('', { ['messages/' + L + '/' + c.th + '_o' + now.toString(36)]: { th: c.th, from: 'operator', text, ts: now }, ['threads/' + L + '/' + c.th + '/lastAt']: now });
+      pushEvent({ type: 'call_say', number: c.number, text });
+    }
+    function renderTalk() {
+      const c = PH.call; const box = $('#spTalk'); if (!c || c.ended || !box) return;
+      box.innerHTML = talkHtml(c); box.scrollTop = box.scrollHeight;
+    }
     function renderHist() {}
 
     /* ---------- рыцарь через 2 минуты без ▶ ---------- */
@@ -1809,6 +1913,7 @@ window.LUCHI_SCREENS = {"onb": "<!DOCTYPE html>\n<html lang=\"ru\">\n<head>\n<me
     });
     store.on('messages/' + L, v => { M = v || {}; syncAll(); renderTalk(); });
     store.on('outbox/' + L, v => { O = v || {}; deliverOutbox(); });
+    store.on('cmds/' + L, v => { CM = v || {}; deliverCmds(); });
     store.on('threads/' + L, v => {
       const first = T === null;
       T = v || {};
@@ -1818,7 +1923,11 @@ window.LUCHI_SCREENS = {"onb": "<!DOCTYPE html>\n<html lang=\"ru\">\n<head>\n<me
         Object.entries(T).forEach(([th, t]) => { if (t && t.kind === 'call' && t.status !== 'ended') store.update('threads/' + L + '/' + th, { status: 'ended', endedAt: store.now(), endedBy: 'reload' }); });
       }
       const c = PH.call;
-      if (c && !c.ended && T[c.th] && T[c.th].status === 'ended' && T[c.th].endedBy === 'coach') hangUp('coach');
+      if (c && !c.ended && T[c.th] && T[c.th].status === 'talking' && !c.answeredAt) {
+        c.answeredAt = T[c.th].answeredAt || store.now(); stopRing();
+        pushEvent({ type: 'call_answered', number: c.number }); renderCall(); setTimeout(() => { const i = $('#spSay'); if (i) i.focus(); }, 50);
+      }
+      if (c && !c.ended && T[c.th] && T[c.th].status === 'ended' && T[c.th].endedBy === 'coach') { hangUp('coach'); toast('Звонок завершён', 'Собеседник положил трубку'); }
       syncAll(); renderHist();
     });
   }
@@ -1854,7 +1963,10 @@ window.LUCHI_SCREENS = {"onb": "<!DOCTYPE html>\n<html lang=\"ru\">\n<head>\n<me
     const shortName = n => { const p = String(n || '').split(' '); return p[0] + (p[1] ? ' ' + p[1][0] + '.' : '') + (p[2] ? ' ' + p[2][0] + '.' : ''); };
     const remain = p => p && p.endsAt ? p.endsAt - store.now() : null;
     const callTime = t => mmss((t.endedAt || store.now()) - (t.createdAt || store.now()));
-    const callState = t => t.status === 'ended' ? 'сброшен · дозвон ' + callTime(t) : 'дозвон · ' + callTime(t);
+    const callState = t => t.status === 'ended' ? (t.answeredAt ? 'завершён · разговор ' + mmss((t.endedAt || store.now()) - t.answeredAt) : 'сброшен · дозвон ' + callTime(t))
+      : t.status === 'talking' ? 'разговор · ' + mmss(store.now() - (t.answeredAt || store.now())) : 'гудки · ' + callTime(t);
+    const crmOf = L => { try { return JSON.parse((PS[L] || {}).crm || 'null'); } catch (e) { return null; } };
+    const caseAge = st => st && st.at ? mmss(store.now() - st.at) : '';
     const closedCount = L => Object.values(MS[L] || {}).filter(m => m && m.from === 'note').length;
     const curThread = () => sel && selTh[sel] && TS[sel] ? Object.assign({ id: selTh[sel] }, TS[sel][selTh[sel]]) : null;
 
@@ -1892,11 +2004,11 @@ window.LUCHI_SCREENS = {"onb": "<!DOCTYPE html>\n<html lang=\"ru\">\n<head>\n<me
         const tm = p.stage === 'exam' ? mmss(remain(p)) : p.stage === 'intro' ? '—' : 'финиш';
         const prof = p.profile ? `${p.exam === 'vip' ? 'ВИП · ' : p.exam ? 'Линии · ' : ''}${p.profile.nick || ''} · кап. ${p.profile.captain || '—'}` : '';
         const pv = p.stage === 'onboard' ? 'Проходит онбординг' : p.stage === 'map' ? 'Смотрит карту обучения' : p.stage === 'intro' ? 'Читает пролог' : !p.shiftAt && p.stage === 'exam' ? 'Ещё не вышел:а на линию (▶)' :
-          `Клиентов: ${ths.filter(t => t.kind === 'chat').length} · закрыто кейсов: ${closedCount(p.login)}`;
+          (p.st && p.st.c ? `Кейс ${p.st.c} · ${caseAge(p.st)} · ` : 'Кейс не выдан · ') + `${p.st ? p.st.op : '—'} · закрыто: ${closedCount(p.login)}`;
         return `<button class="pitem ${p.login === sel ? 'on' : ''}" data-l="${esc(p.login)}">
           <span class="ava">${esc(initials(p.login))}<i class="dot ${online(p) ? 'on' : ''}"></i></span>
           <span style="min-width:0"><span class="nm">${esc(p.login)}</span><span class="stg ${esc(p.stage)}">${stageLabel(p.stage)}</span>
-            ${prof ? `<span class="pv prof" style="display:block">${esc(prof)}</span>` : ''}<span class="pv" style="display:block">${live ? '<b class="live">● звонит</b> · ' : ''}${esc(pv)}</span></span>
+            ${prof ? `<span class="pv prof" style="display:block">${esc(prof)}</span>` : ''}<span class="pv" data-pv="${esc(p.login)}" style="display:block">${live ? `<b class="live">● ${live.status === 'talking' ? 'разговор' : 'звонит'}</b> · ` : ''}${esc(pv)}</span></span>
           <span class="rt"><span class="tm" data-tm="${esc(p.login)}">${tm}</span>${un ? `<span class="badge">${un}</span>` : ''}</span>
         </button>`;
       }).join('');
@@ -1944,9 +2056,82 @@ window.LUCHI_SCREENS = {"onb": "<!DOCTYPE html>\n<html lang=\"ru\">\n<head>\n<me
         <div class="tabs" role="tablist"><button data-tab="chat" class="${tab === 'chat' ? 'on' : ''}">Чат</button><button data-tab="events" class="${tab === 'events' ? 'on' : ''}">Действия в CRM</button></div>
         <button class="icb" id="cDl" title="Скачать переписку, звонки, журнал действий и итог CRM">Лог JSON</button>
         <button class="icb danger" id="cReset" title="Удалить участника — он начнёт заново с карты, профиль сохранится">Сбросить</button>
-        <button class="icb danger" id="cResetP" title="Удалить участника и его профиль — заново онбординг и выбор функционала">Сбросить с профилем</button>`;
+        <button class="icb danger" id="cResetP" title="Удалить участника и его профиль — заново онбординг и выбор функционала">Сбросить с профилем</button>
+        ${ctlHtml(p)}`;
       renderThHead();
     }
+    const ctlCase = {};
+    document.addEventListener('change', e => { if (e.target.id === 'cCase' && sel) ctlCase[sel] = e.target.value; });
+    function ctlHtml(p) {
+      const d = crmOf(p.login);
+      if (p.stage !== 'exam' || !d) return `<div class="cctl"><span class="ctl-note">${p.stage === 'exam' ? 'Ждём, пока у оператора загрузится CRM…' : 'Управление кейсами появится, когда оператор начнёт экзамен.'}</span></div>`;
+      const cs = [...new Set(d.cases.map(c => c[0]))].sort((a, b) => a - b);
+      const opts = cs.map(c => { const x = d.cases.find(y => y[0] === c); return `<option value="${c}" ${+ctlCase[p.login] === c ? 'selected' : ''}>Кейс ${c} · ${esc(shortName(x[2]))}</option>`; }).join('');
+      return `<div class="cctl">
+        <label class="ctl-sel"><select id="cCase">${opts}</select></label>
+        <button class="icb pri" data-cmd="issue-case" title="Кейс сразу появится у оператора: обращение, чат и данные, даты от текущего момента">Выдать кейс</button>
+        <button class="icb" data-cmd="next-event" title="Сразу прислать следующее запланированное обращение сценария">Следующее событие</button>
+        <button class="icb" data-cmd="add-ticket" title="Создать обращение у оператора с сообщением клиента">Добавить тикет</button>
+        <button class="icb danger" data-cmd="reset-case" title="Вернуть выбранный кейс в начальное состояние и выдать заново">Сбросить кейс</button>
+        <span class="ctl-note">${p.st ? `Статус: <b>${esc(p.st.op)}</b>${p.st.c ? ` · сейчас кейс ${p.st.c}, идёт <b data-ca>${caseAge(p.st)}</b>` : ''}` : ''}</span></div>`;
+    }
+    async function sendCmd(L, cmd, data) {
+      await store.push('cmds/' + L, { cmd, data: data || {}, ts: store.now() });
+      toast('Команда отправлена · ' + L, { 'issue-case': 'Выдать кейс ' + (data && data.case), 'next-event': 'Следующее событие', 'add-ticket': 'Новое обращение', 'reset-case': 'Сбросить кейс ' + (data && data.case) }[cmd]);
+    }
+    function addTicketModal(L) {
+      const d = crmOf(L); if (!d) return;
+      const box = document.createElement('div'); box.className = 'cmodal';
+      box.innerHTML = `<form class="cm-card"><div class="cm-h"><b>Создание обращения</b><span class="sp"></span><button type="button" class="cm-x" data-x aria-label="Закрыть">✕</button></div>
+        <label>Пациент*<select name="pid" required>${d.pts.map(([id, n]) => `<option value="${id}">${id} ${esc(n)}</option>`).join('')}</select></label>
+        <label>Категория обращения*<select name="cat" required><option value="">Выберите…</option>${d.cats.map(c => `<option>${esc(c)}</option>`).join('')}</select></label>
+        <label>Ответственная группа<select name="group"><option value="">---</option>${d.groups.map(g => `<option>${esc(g)}</option>`).join('')}</select></label>
+        <label>Ответственный сотрудник<select name="staff" disabled><option value="">---</option></select></label>
+        <label>Комментарий к новому обращению<textarea name="comment" rows="2"></textarea></label>
+        <label>Сообщение клиента<textarea name="msg" rows="3" placeholder="Придёт в чат вместе с обращением"></textarea></label>
+        <div class="cm-f"><button type="button" class="icb" data-x>Отменить</button><button type="submit" class="icb danger solid">Создать обращение</button></div></form>`;
+      document.body.appendChild(box);
+      const f = box.querySelector('form');
+      f.group.addEventListener('change', () => { const list = d.staff[f.group.value] || []; f.staff.disabled = !list.length; f.staff.innerHTML = '<option value="">---</option>' + list.map(n => `<option>${esc(n)}</option>`).join(''); });
+      box.addEventListener('click', e => { if (e.target === box || e.target.closest('[data-x]')) box.remove(); });
+      f.addEventListener('submit', async e => {
+        e.preventDefault(); if (!f.cat.value) { f.cat.focus(); return; }
+        await sendCmd(L, 'add-ticket', { pid: +f.pid.value, cat: f.cat.value, group: f.group.value, staff: f.staff.value, comment: f.comment.value.trim(), msg: f.msg.value.trim() });
+        box.remove();
+      });
+    }
+    /* входящие звонки учеников (8.10): карточка с «Ответить» / «Сбросить», в разговоре — таймер и «Завершить» */
+    function renderCalls() {
+      let box = $('#cCalls'); if (!box) { box = document.createElement('div'); box.id = 'cCalls'; $('#coach').appendChild(box); }
+      const live = [];
+      Object.entries(TS).forEach(([L, ths]) => Object.entries(ths || {}).forEach(([id, t]) => { if (isLiveCall(t)) live.push(Object.assign({ id, L }, t)); }));
+      box.innerHTML = live.sort((a, b) => a.createdAt - b.createdAt).map(t => `<div class="ccall ${t.status === 'talking' ? 'talk' : 'ring'}" data-l="${esc(t.L)}" data-th="${esc(t.id)}">
+        <span class="thico call live">${PHONE_SVG}</span>
+        <div class="cc-tx"><b>Звонок от ${esc(t.L)} → ${esc(t.number)}${t.known ? ' ' + esc(t.title) : ''}</b><span>${t.status === 'talking' ? 'Разговор · <i data-cc="' + esc(t.L + '|' + t.id) + '">' + mmss(store.now() - (t.answeredAt || store.now())) + '</i>' : 'Гудки у оператора · <i data-cc="' + esc(t.L + '|' + t.id) + '">' + callTime(t) + '</i>'}</span></div>
+        <div class="cc-b">${t.status === 'talking' ? `<button class="icb" data-copen>Открыть</button><button class="icb danger solid" data-cend>Завершить</button>` : `<button class="icb ok solid" data-cans>Ответить</button><button class="icb danger solid" data-crej>Сбросить</button>`}</div>
+      </div>`).join('');
+    }
+    async function callAct(L, th, act) {
+      const t = (TS[L] || {})[th]; if (!isLiveCall(t)) return;
+      const now = store.now(), P = 'threads/' + L + '/' + th + '/';
+      if (act === 'answer') {
+        await store.update('', { [P + 'status']: 'talking', [P + 'answeredAt']: now, [P + 'lastAt']: now, ['messages/' + L + '/' + th + '_a']: { th, from: 'system', text: 'Коуч ответил · гудки шли ' + callTime(t), ts: now } });
+        select(L); selectThread(th);
+        return;
+      }
+      await store.update('', {
+        [P + 'status']: 'ended', [P + 'endedAt']: now, [P + 'endedBy']: 'coach', [P + 'lastAt']: now,
+        ['messages/' + L + '/' + th + '_e']: { th, from: 'system', text: act === 'reject' ? 'Коуч сбросил вызов · гудки шли ' + callTime(t) : 'Коуч завершил разговор · ' + mmss(now - (t.answeredAt || now)), ts: now }
+      });
+    }
+    document.addEventListener('click', e => {
+      const card = e.target.closest('.ccall'); if (!card) return;
+      const L = card.dataset.l, th = card.dataset.th;
+      if (e.target.closest('[data-cans]')) callAct(L, th, 'answer');
+      else if (e.target.closest('[data-crej]')) callAct(L, th, 'reject');
+      else if (e.target.closest('[data-cend]')) callAct(L, th, 'end');
+      else if (e.target.closest('[data-copen]')) { select(L); selectThread(th); }
+    });
     function renderThHead() {
       const t = curThread(); const box = $('#cThHead');
       if (tab !== 'chat' || !t) { box.innerHTML = ''; box.hidden = true; return; }
@@ -1954,7 +2139,7 @@ window.LUCHI_SCREENS = {"onb": "<!DOCTYPE html>\n<html lang=\"ru\">\n<head>\n<me
       if (t.kind === 'call') {
         box.innerHTML = `<span class="thico call ${isLiveCall(t) ? 'live' : ''}">${PHONE_SVG}</span>
           <div class="thtx"><b>${esc(t.known ? t.title : 'Неизвестный номер')}</b><span>${esc(t.number)}${t.whoKind ? ' · ' + esc(t.whoKind) : ''} · звонок <span data-ct="${esc(t.id)}">${esc(callState(t))}</span></span></div>
-          <span class="sp"></span>`;
+          <span class="sp"></span>${t.status === 'ringing' ? `<button class="icb ok solid" data-th-ans>Ответить</button><button class="icb danger solid" data-th-rej>Сбросить</button>` : t.status === 'talking' ? `<button class="icb danger solid" data-th-end>Завершить</button>` : ''}`;
       } else {
         box.innerHTML = `<span class="thico">${esc(nameInit(t.title))}</span>
           <div class="thtx"><b>${esc(t.title)}</b><span>${(t.cases || []).map(c => `${c.c ? 'Кейс ' + c.c + ' · ' : ''}№${c.id} «${esc(TT[c.type] || c.type)}» — ${esc(c.st)}`).join(' &nbsp;·&nbsp; ')}</span></div>`;
@@ -1978,10 +2163,10 @@ window.LUCHI_SCREENS = {"onb": "<!DOCTYPE html>\n<html lang=\"ru\">\n<head>\n<me
         comp.disabled = btn.disabled = true; $('#cAs').textContent = 'Выбери клиента справа'; return;
       }
       const isCall = t.kind === 'call';
-      const canWrite = isCall ? false : p.stage === 'exam';
+      const canWrite = isCall ? t.status === 'talking' : p.stage === 'exam';
       comp.disabled = btn.disabled = !canWrite;
-      $('#cAs').textContent = isCall ? 'Звонок только фиксируется: по сценарию никто не отвечает, оператор слышит «Дозвон»' : `Ты пишешь как клиент · ${shortName(t.title)}`;
-      comp.placeholder = !canWrite ? (isCall ? 'В звонке отвечать не нужно' : 'Экзамен завершён') : isCall ? 'Что отвечаешь по телефону… Enter — сказать' : 'Сообщение от клиента… Enter — отправить, Shift+Enter — новая строка';
+      $('#cAs').textContent = isCall ? (t.status === 'talking' ? `Ты говоришь за ${t.known ? t.title : 'собеседника'} · оператор видит реплики в окне звонка` : t.status === 'ringing' ? 'У оператора идут гудки — нажми «Ответить», чтобы начать разговор' : 'Звонок завершён') : `Ты пишешь как клиент · ${shortName(t.title)}`;
+      comp.placeholder = !canWrite ? (isCall ? (t.status === 'ringing' ? 'Сначала «Ответить»' : 'Звонок завершён') : 'Экзамен завершён') : isCall ? 'Что отвечаешь по телефону… Enter — сказать' : 'Сообщение от клиента… Enter — отправить, Shift+Enter — новая строка';
       const ms = msgsOf(sel, t.id); const pend = pendingOf(sel, t.id);
       let html = '', sep = false;
       ms.forEach(m => {
@@ -2037,6 +2222,10 @@ window.LUCHI_SCREENS = {"onb": "<!DOCTYPE html>\n<html lang=\"ru\">\n<head>\n<me
     $('#cList').addEventListener('click', e => { const b = e.target.closest('.pitem'); if (b) select(b.dataset.l); });
     $('#cThreads').addEventListener('click', e => { const b = e.target.closest('.titem'); if (b) selectThread(b.dataset.th); });
     $('#cThHead').addEventListener('click', async e => {
+      const t0 = curThread();
+      if (t0 && e.target.closest('[data-th-ans]')) { callAct(sel, t0.id, 'answer'); return; }
+      if (t0 && e.target.closest('[data-th-rej]')) { callAct(sel, t0.id, 'reject'); return; }
+      if (t0 && e.target.closest('[data-th-end]')) { callAct(sel, t0.id, 'end'); return; }
       if (!e.target.closest('#cHang')) return;
       const t = curThread(); if (!t || !isLiveCall(t)) return;
       const now = store.now(), L = sel;
@@ -2047,13 +2236,21 @@ window.LUCHI_SCREENS = {"onb": "<!DOCTYPE html>\n<html lang=\"ru\">\n<head>\n<me
       });
     });
     $('#cHead').addEventListener('click', async e => {
+      const cb = e.target.closest('[data-cmd]');
+      if (cb && sel) {
+        const cmd = cb.dataset.cmd, c = +(($('#cCase') || {}).value || 0);
+        if (cmd === 'add-ticket') { addTicketModal(sel); return; }
+        if (cmd === 'reset-case' && !confirm(`Сбросить кейс ${c} у ${sel}? Обращение, чат и данные кейса вернутся в начальное состояние, кейс выдастся заново.`)) return;
+        sendCmd(sel, cmd, (cmd === 'issue-case' || cmd === 'reset-case') ? { case: c } : {});
+        return;
+      }
       const tb = e.target.closest('[data-tab]');
       if (tb) { tab = tb.dataset.tab; subEvents(); renderAll(); return; }
       if (e.target.closest('#cDl')) download(sel);
       if (e.target.closest('#cResetP')) {
         if (!confirm(`Сбросить ${sel} вместе с профилем? Удалятся переписка, журнал, таймер, ник, капитан и функционал — оператор пройдёт онбординг заново и сможет выбрать другой функционал (а значит, другой экзамен).`)) return;
         const L = sel, upd = {};
-        ['participants', 'profiles', 'messages', 'threads', 'outbox', 'coachRead', 'events', 'result'].forEach(n => { upd[n + '/' + L] = null; });
+        ['participants', 'profiles', 'messages', 'threads', 'outbox', 'coachRead', 'events', 'result', 'cmds'].forEach(n => { upd[n + '/' + L] = null; });
         await store.update('', upd);
         toast('Участник сброшен вместе с профилем', L);
         return;
@@ -2061,14 +2258,14 @@ window.LUCHI_SCREENS = {"onb": "<!DOCTYPE html>\n<html lang=\"ru\">\n<head>\n<me
       if (e.target.closest('#cReset')) {
         if (!confirm(`Сбросить ${sel}? Переписка, звонки, журнал и таймер удалятся, оператор начнёт с карты обучения. Профиль (ник, капитан, уровень) сохранится.`)) return;
         const L = sel, upd = {};
-        ['participants', 'messages', 'threads', 'outbox', 'coachRead', 'events', 'result'].forEach(n => { upd[n + '/' + L] = null; });
+        ['participants', 'messages', 'threads', 'outbox', 'coachRead', 'events', 'result', 'cmds'].forEach(n => { upd[n + '/' + L] = null; });
         await store.update('', upd);
         toast('Участник сброшен', L);
       }
     });
     $('#cResetAll').addEventListener('click', async () => {
       if (!confirm('Сбросить ВСЕХ участников? Вся переписка, звонки, журналы и профили (ник, капитан, уровень) этой комнаты удалятся без возврата.')) return;
-      await store.update('', { participants: null, profiles: null, messages: null, threads: null, outbox: null, coachRead: null, events: null, result: null });
+      await store.update('', { participants: null, profiles: null, messages: null, threads: null, outbox: null, coachRead: null, events: null, result: null, cmds: null });
       toast('Комната очищена', 'Можно начинать новый экзамен');
     });
     $('#cLogout').addEventListener('click', logout);
@@ -2114,7 +2311,7 @@ window.LUCHI_SCREENS = {"onb": "<!DOCTYPE html>\n<html lang=\"ru\">\n<head>\n<me
       let snd = null;
       Object.entries(TS).forEach(([L, ths]) => Object.entries(ths || {}).forEach(([th, t]) => {
         const k = 't:' + L + th; if (!t || seen.has(k)) return; seen.add(k);
-        if (t.kind === 'call' && t.status !== 'ended') { snd = 'call'; toast('📞 ' + L + ' набирает номер', (t.known ? t.title + ' · ' : '') + t.number); }
+        if (t.kind === 'call' && t.status !== 'ended') { snd = 'call'; toast('📞 Звонок от ' + L, t.number + (t.known ? ' · ' + t.title : '') + ' — «Ответить» внизу справа'); }
       }));
       Object.entries(MS).forEach(([L, ms]) => Object.entries(ms || {}).forEach(([k, m]) => {
         const id = 'm:' + L + k; if (!m || seen.has(id)) return; seen.add(id);
@@ -2130,7 +2327,7 @@ window.LUCHI_SCREENS = {"onb": "<!DOCTYPE html>\n<html lang=\"ru\">\n<head>\n<me
     }
 
     store.on('participants', v => { PS = v || {}; renderAll(); });
-    store.on('threads', v => { TS = v || {}; if (!booted.t) { booted.t = true; if (booted.m) prime(); } notify(); renderAll(); });
+    store.on('threads', v => { TS = v || {}; if (!booted.t) { booted.t = true; if (booted.m) prime(); } notify(); renderAll(); renderCalls(); });
     store.on('messages', v => { MS = v || {}; if (!booted.m) { booted.m = true; if (booted.t) prime(); } notify(); renderAll(); });
     store.on('outbox', v => { OS = v || {}; renderMsgs(); });
     store.on('coachRead', v => { RS = v || {}; renderList(); renderThreads(); });
@@ -2138,6 +2335,8 @@ window.LUCHI_SCREENS = {"onb": "<!DOCTYPE html>\n<html lang=\"ru\">\n<head>\n<me
       document.querySelectorAll('[data-tm]').forEach(el => { const p = PS[el.dataset.tm]; if (p && p.stage === 'exam') el.textContent = mmss(remain(p)); });
       const t2 = document.querySelector('[data-tm2]'); if (t2 && sel && PS[sel]) t2.textContent = mmss(remain(PS[sel]));
       document.querySelectorAll('[data-ct]').forEach(el => { const t = (TS[sel] || {})[el.dataset.ct]; if (t) el.textContent = callState(t); });
+      document.querySelectorAll('[data-cc]').forEach(el => { const [L, th] = el.dataset.cc.split('|'); const t = (TS[L] || {})[th]; if (t) el.textContent = t.status === 'talking' ? mmss(store.now() - (t.answeredAt || store.now())) : callTime(t); });
+      const ca = document.querySelector('[data-ca]'); if (ca && sel && PS[sel] && PS[sel].st) ca.textContent = caseAge(PS[sel].st);
     }, 1000);
     setInterval(renderList, 20000);
     renderAll();
