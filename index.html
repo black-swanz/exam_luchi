@@ -668,8 +668,9 @@ h1,h2,h3,.display{font-family:var(--font-display);font-weight:900;text-transform
 .cl-row.err{background:rgba(var(--coral-rgb),.1)}.cl-row.err .k{background:var(--coral);color:#fff}
 .cl-row.stg .k,.cl-row.fin .k{background:var(--sand);color:var(--ink)}.cl-row.fin{background:rgba(var(--sand-rgb),.08)}
 .cl-row.clk,.cl-row.crm{padding:4px 10px;font-size:13px}.cl-row.clk .x,.cl-row.crm .x{color:rgba(var(--white-rgb),.75)}
-.calls-back{position:fixed;right:16px;bottom:16px;z-index:200;font-family:var(--font-display);font-weight:500;text-transform:uppercase;letter-spacing:.1em;font-size:12px;padding:9px 16px;border-radius:var(--pill);background:rgba(var(--ink-rgb),.88);color:var(--sand);border:1.5px solid rgba(var(--sand-rgb),.35);box-shadow:0 8px 20px rgba(0,0,0,.25)}
+.calls-back{position:fixed;right:22px;top:13px;z-index:200;font-family:var(--font-display);font-weight:500;text-transform:uppercase;letter-spacing:.1em;font-size:12px;padding:9px 16px;border-radius:var(--pill);background:rgba(var(--ink-rgb),.88);color:var(--sand);border:1.5px solid rgba(var(--sand-rgb),.35);box-shadow:0 8px 20px rgba(0,0,0,.25)}
 .calls-back:hover{background:var(--coral);border-color:var(--coral);color:#fff}
+.calls-back{padding:7px 14px;font-size:11px}
 .cl-row .x{text-transform:none;letter-spacing:0;font-family:var(--font-body)}
 </style>
 </head>
@@ -1211,7 +1212,7 @@ window.LUCHI_SCREENS = {"onb": "<!DOCTYPE html>\n<html lang=\"ru\">\n<head>\n<me
     fr.src = (C.callsUrl || 'calls.html') + '?embed=1&op=' + encodeURIComponent(L);
     root.appendChild(fr);
     // выход на карту доступен всегда (кнопка тренажёра бывает закрыта сценой рыцаря)
-    const back = document.createElement('button'); back.type = 'button'; back.className = 'calls-back'; back.textContent = '← Карта обучения';
+    const back = document.createElement('button'); back.type = 'button'; back.className = 'calls-back'; back.textContent = '← К карте';
     back.onclick = async () => {
       if (!confirm('Выйти из тренажёра звонков на карту? Пройденные этапы сохранятся, текущий звонок начнётся заново.')) return;
       h({ source: fr.contentWindow, data: { source: 'luchi-calls', kind: 'exit', text: 'Вышел:ла из тренажёра на карту' } });

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Тренажёр входящего звонка · CRM 2.0 · ВИП-линия</title>
+<title>Тренажёр звонков · Симуляция входящих звонков</title>
 <style>
 
 /* ===== Рыцарь-манекен · сцена (KnightStage) — стиль «Королевство Лучи» ===== */
@@ -775,7 +775,7 @@ a.tb-out{text-decoration:none;display:inline-flex;align-items:center}
 <path d="M532.212 487.476L620.938 597.738L645.448 579.606L566.526 461.994L576.82 448.762L713.586 486.496L722.409 458.073L589.075 408.578C545.938 392.406 503.781 451.213 532.212 487.476Z" fill="currentColor"/>
 <path d="M1019.96 253.228C970.448 253.228 939.076 258.619 924.86 285.572L798.389 525.207H896.428L993.488 335.557H1046.43L1143.49 524.717H1241.04L1116.53 287.042C1101.33 258.129 1069.47 253.228 1019.96 253.228Z" fill="currentColor"/>
 </svg></div>
-    <p class="kicker">Тренажёр входящих · ВИП-линия</p>
+    <p class="kicker">Тренажёр звонков · Симуляция входящих звонков</p>
     <h1>Вход</h1>
     <label class="gt-f"><span>Логин</span><input id="gtLogin" placeholder="EDUCATION-1" autocapitalize="characters" required></label>
     <label class="gt-f"><span>Пароль</span><span class="gt-pass"><input id="gtPass" type="password" required><button type="button" id="gtEye" aria-label="Показать пароль"><svg viewBox="0 0 24 24"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></button></span></label>
@@ -798,7 +798,7 @@ a.tb-out{text-decoration:none;display:inline-flex;align-items:center}
 <path d="M532.212 487.476L620.938 597.738L645.448 579.606L566.526 461.994L576.82 448.762L713.586 486.496L722.409 458.073L589.075 408.578C545.938 392.406 503.781 451.213 532.212 487.476Z" fill="currentColor"/>
 <path d="M1019.96 253.228C970.448 253.228 939.076 258.619 924.86 285.572L798.389 525.207H896.428L993.488 335.557H1046.43L1143.49 524.717H1241.04L1116.53 287.042C1101.33 258.129 1069.47 253.228 1019.96 253.228Z" fill="currentColor"/>
 </svg></div>
-    <div class="crumbs">Тренажёр входящих<span class="sep">·</span>ВИП-линия<span class="sep">·</span><span id="stageLbl">Этап 1 · Симуляция звонка</span></div>
+    <div class="crumbs">Тренажёр звонков<span class="sep">·</span>Симуляция входящих звонков<span class="sep">·</span><span id="stageLbl">Этап 1 · Симуляция звонка</span></div>
     <span class="sp"></span>
     <span class="pair-chip hidden" id="pairChip"></span>
     <span class="tb-chip">Учебные данные</span>
@@ -1150,7 +1150,7 @@ window.KnightStage = (function () {
   addEventListener('DOMContentLoaded', function () {
     setTimeout(function () {
       var b = document.getElementById('tbOut'); if (!b) return;
-      b.textContent = 'К карте';
+      b.textContent = '← К карте'; b.style.visibility = 'hidden';   // место в шапке держим: поверх лежит кнопка платформы (её не закрывает сцена рыцаря)
       b.onclick = function () { send('exit', 'Вышел:ла из тренажёра на карту', null); };
     }, 0);
     send('open', 'Открыл:а тренажёр звонков', null);
